@@ -17,6 +17,10 @@ import NotFound from "./pages/NotFound";
 // Direct Inventory Pages (No Sidebar or Layout)
 import ProductInfo from "./pages/Inventory/ProductInfo";
 import StockPurchaseDetails from "./pages/Inventory/StockPurchaseDetails";
+import UserManegement from "./pages/UserManegement/UserManegement";
+import SupplierInformation from "./pages/Inventory/SupplierInformation";
+import SalesHistory from "./pages/Inventory/SalesHistory";
+import TransactionTracking from "./pages/Inventory/TransactionTracking";
 
 const queryClient = new QueryClient();
 
@@ -43,7 +47,11 @@ const App = () => (
           {/* Inventory Pages – Direct, No Sidebar */}
           <Route path="/inventory/productinfo" element={<ProductInfo />} />
           <Route path="/inventory/stock-purchase" element={<StockPurchaseDetails />} />
-
+          <Route path="/inventory/supplier-information" element={<SupplierInformation />} />
+          <Route path="/inventory/sales-history" element={<SalesHistory />} />
+          <Route path="/inventory/transaction-traking" element={<TransactionTracking />} />
+          {/* user Mangement */}
+           <Route path="/user-manegement" element={<UserManegement />} />
           {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>

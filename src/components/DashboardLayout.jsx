@@ -19,8 +19,12 @@ import {
   ChevronDown,
   ChevronRight,
   Box,
-  ShoppingBag
+  ShoppingBag,
+  Container,
+
 } from "lucide-react";
+import { ClipboardList, ArrowRightLeft } from "lucide-react";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,8 +45,12 @@ const navigation = [
     subNav: [
       { name: "Product", href: "/inventory/productinfo", icon: Box },
       { name: "Stock & Purchase", href: "/inventory/stock-purchase", icon: ShoppingBag },
+      { name: "Supplier Information", href: "/inventory/supplier-information", icon: Container },
+      { name: "Sales History", href: "/inventory/sales-history", icon: ClipboardList },
+      { name: "Transaction Traking", href: "/inventory/transaction-traking", icon: ArrowRightLeft },
     ],
   },
+  { name: "User Management", href: "/user-manegement", icon: User },
   { name: "Sales", href: "/sales", icon: ShoppingCart },
   { name: "Consignment", href: "/consignment", icon: Truck },
   { name: "Barcode", href: "/barcode", icon: Barcode },
