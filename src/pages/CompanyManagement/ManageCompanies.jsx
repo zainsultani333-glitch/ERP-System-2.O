@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Image } from "lucide-react";
 import {
     Plus,
     Search,
@@ -18,6 +20,7 @@ import {
     Shield,
     CheckCircle2,
     Calendar,
+    Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -62,6 +65,8 @@ const ManageCompanies = () => {
             createdAt: "2025-01-04",
         },
     ]);
+
+    const industries = ["Technology", "Retail", "Manufacturing", "Finance", "Healthcare"];
 
     const [newCompany, setNewCompany] = useState({
         name: "",
@@ -160,11 +165,12 @@ const ManageCompanies = () => {
                                     Add New Company
                                 </DialogTitle>
                             </DialogHeader>
+
                             <div className="space-y-6 pt-4">
                                 {/* Company Name */}
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-                                        <Building2 className="w-4 h-4" /> Company Name
+                                    <Label className="flex items-center gap-2 text-sm font-medium">
+                                        <Building2 className="w-4 h-4" /> Company Name <span className="text-red-500">*</span>
                                     </Label>
                                     <Input
                                         placeholder="Enter company name"
@@ -174,10 +180,34 @@ const ManageCompanies = () => {
                                     />
                                 </div>
 
-                                {/* Contact Info */}
+                                {/* Company Logo */}
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2 text-sm font-medium">
+                                        <Image className="w-4 h-4" /> Company Logo
+                                    </Label>
+                                    <Input
+                                        type="file"
+                                        accept=".jpg,.png,.svg"
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                const reader = new FileReader();
+                                                reader.onload = () => setNewCompany(prev => ({ ...prev, logo: reader.result }));
+                                                reader.readAsDataURL(e.target.files[0]);
+                                            }
+                                        }}
+                                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                                    />
+                                    {newCompany.logo && (
+                                        <span className="text-sm text-muted-foreground">
+                                            {typeof newCompany.logo === "string" ? "Logo selected" : newCompany.logo.name}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Email & Contact */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium flex items-center gap-2">
+                                        <Label className="flex items-center gap-2 text-sm font-medium">
                                             <Mail className="w-4 h-4" /> Email
                                         </Label>
                                         <Input
@@ -189,7 +219,7 @@ const ManageCompanies = () => {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium flex items-center gap-2">
+                                        <Label className="flex items-center gap-2 text-sm font-medium">
                                             <Phone className="w-4 h-4" /> Contact
                                         </Label>
                                         <Input
@@ -201,31 +231,40 @@ const ManageCompanies = () => {
                                     </div>
                                 </div>
 
-                                {/* Logo Upload */}
+                                {/* Address */}
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium flex items-center gap-2">
-                                        Logo
+                                    <Label className="flex items-center gap-2 text-sm font-medium">
+                                        Address
                                     </Label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                                const reader = new FileReader();
-                                                reader.onload = () => {
-                                                    setNewCompany(prev => ({ ...prev, logo: reader.result }));
-                                                };
-                                                reader.readAsDataURL(e.target.files[0]);
-                                            }
-                                        }}
-                                        className="border-2 p-2 rounded-lg focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                                    <Textarea
+                                        placeholder="Enter company address"
+                                        value={newCompany.address}
+                                        onChange={(e) => setNewCompany(prev => ({ ...prev, address: e.target.value }))}
+                                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                                     />
                                 </div>
 
-                                {/* Role and Status */}
+                                {/* Industry / Type */}
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2 text-sm font-medium">
+                                        <Briefcase className="w-4 h-4" /> Industry / Type
+                                    </Label>
+                                    <Select value={newCompany.industry} onValueChange={(val) => setNewCompany(prev => ({ ...prev, industry: val }))}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select industry" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {industries.map((ind) => (
+                                                <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Role & Status */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium flex items-center gap-2">
+                                        <Label className="flex items-center gap-2 text-sm font-medium">
                                             <Shield className="w-4 h-4" /> Role
                                         </Label>
                                         <Select value={newCompany.role} onValueChange={(val) => setNewCompany(prev => ({ ...prev, role: val }))}>
@@ -240,7 +279,7 @@ const ManageCompanies = () => {
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium flex items-center gap-2">
+                                        <Label className="flex items-center gap-2 text-sm font-medium">
                                             <CheckCircle2 className="w-4 h-4" /> Status
                                         </Label>
                                         <Select value={newCompany.status} onValueChange={(val) => setNewCompany(prev => ({ ...prev, status: val }))}>
@@ -255,6 +294,7 @@ const ManageCompanies = () => {
                                     </div>
                                 </div>
 
+                                {/* Submit Button */}
                                 <Button
                                     className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium"
                                     onClick={handleAddCompany}
@@ -264,6 +304,7 @@ const ManageCompanies = () => {
                             </div>
                         </DialogContent>
                     </Dialog>
+
                 </div>
 
                 {/* Filters */}
@@ -316,6 +357,7 @@ const ManageCompanies = () => {
                         <table className="w-full">
                             <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
                                 <tr>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Sr</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase">Logo</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase">Company Name</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase">Email / Contact</th>
@@ -326,11 +368,12 @@ const ManageCompanies = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/30">
-                                {paginatedCompanies.map((company) => (
+                                {paginatedCompanies.map((company, index) => (
                                     <tr
                                         key={company.id}
                                         className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
                                     >
+                                        <td className="px-6 py-4 font-semibold">{index + 1}</td>
                                         <td className="px-6 py-4">
                                             <img src={company.logo} alt={company.name} className="w-10 h-10 rounded-full border" />
                                         </td>
