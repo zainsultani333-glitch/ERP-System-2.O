@@ -21,6 +21,8 @@ import {
     CheckCircle2,
     Calendar,
     Briefcase,
+    Hash,
+    MapPin
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -66,15 +68,34 @@ const ManageCompanies = () => {
         },
     ]);
 
-    const industries = ["Technology", "Retail", "Manufacturing", "Finance", "Healthcare"];
+    // Define mapping of countries to VAT numbers
+
+    const countries = [
+        "Pakistan",
+        "USA",
+        "UK",
+        "Canada"];
+
+    const countryVatMap = {
+        Pakistan: "PK123456789",
+        USA: "US987654321",
+        UK: "UK567890123",
+        Canada: "CA345678901",
+        // add more countries as needed
+    };
+
 
     const [newCompany, setNewCompany] = useState({
         name: "",
+        logo: null,
         email: "",
         contact: "",
+        address: "",
+        industry: "",
+        vatNumber: "",
+        country: "",
         role: "",
-        status: "",
-        logo: "",
+        status: ""
     });
 
     const [searchTerm, setSearchTerm] = useState("");
@@ -133,6 +154,13 @@ const ManageCompanies = () => {
         });
     };
 
+    const EU_VAT_RATES = {
+        France: 20,
+        Germany: 19,
+        Belgium: 21
+    };
+
+    const vatRate = EU_VAT_RATES[newCompany.country] || 0;
     const handleEdit = (id) => toast.info(`Editing company #${id}`);
     const handleDelete = (id) => toast.error(`Deleting company #${id}`);
 
@@ -167,41 +195,44 @@ const ManageCompanies = () => {
                             </DialogHeader>
 
                             <div className="space-y-6 pt-4">
-                                {/* Company Name */}
-                                <div className="space-y-2">
-                                    <Label className="flex items-center gap-2 text-sm font-medium">
-                                        <Building2 className="w-4 h-4" /> Company Name <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        placeholder="Enter company name"
-                                        value={newCompany.name}
-                                        onChange={(e) => setNewCompany(prev => ({ ...prev, name: e.target.value }))}
-                                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-                                    />
-                                </div>
+                                {/* Company Name & Logo */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Company Name */}
+                                    <div className="space-y-2">
+                                        <Label className="flex items-center gap-2 text-sm font-medium">
+                                            <Building2 className="w-4 h-4" /> Company Name <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            placeholder="Enter company name"
+                                            value={newCompany.name}
+                                            onChange={(e) => setNewCompany(prev => ({ ...prev, name: e.target.value }))}
+                                            className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                                        />
+                                    </div>
 
-                                {/* Company Logo */}
-                                <div className="space-y-2">
-                                    <Label className="flex items-center gap-2 text-sm font-medium">
-                                        <Image className="w-4 h-4" /> Company Logo
-                                    </Label>
-                                    <Input
-                                        type="file"
-                                        accept=".jpg,.png,.svg"
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                                const reader = new FileReader();
-                                                reader.onload = () => setNewCompany(prev => ({ ...prev, logo: reader.result }));
-                                                reader.readAsDataURL(e.target.files[0]);
-                                            }
-                                        }}
-                                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-                                    />
-                                    {newCompany.logo && (
-                                        <span className="text-sm text-muted-foreground">
-                                            {typeof newCompany.logo === "string" ? "Logo selected" : newCompany.logo.name}
-                                        </span>
-                                    )}
+                                    {/* Company Logo */}
+                                    <div className="space-y-2">
+                                        <Label className="flex items-center gap-2 text-sm font-medium">
+                                            <Image className="w-4 h-4" /> Company Logo
+                                        </Label>
+                                        <Input
+                                            type="file"
+                                            accept=".jpg,.png,.svg"
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    const reader = new FileReader();
+                                                    reader.onload = () => setNewCompany(prev => ({ ...prev, logo: reader.result }));
+                                                    reader.readAsDataURL(e.target.files[0]);
+                                                }
+                                            }}
+                                            className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                                        />
+                                        {newCompany.logo && (
+                                            <span className="text-sm text-muted-foreground">
+                                                {typeof newCompany.logo === "string" ? "Logo selected" : newCompany.logo.name}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Email & Contact */}
@@ -243,24 +274,48 @@ const ManageCompanies = () => {
                                         className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                                     />
                                 </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                                {/* Industry / Type */}
-                                <div className="space-y-2">
-                                    <Label className="flex items-center gap-2 text-sm font-medium">
-                                        <Briefcase className="w-4 h-4" /> Industry / Type
-                                    </Label>
-                                    <Select value={newCompany.industry} onValueChange={(val) => setNewCompany(prev => ({ ...prev, industry: val }))}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select industry" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {industries.map((ind) => (
-                                                <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    {/* Country */}
+                                    <div className="space-y-2">
+                                        <Label className="flex items-center gap-2 text-sm font-medium">
+                                            <MapPin className="w-4 h-4" /> Country
+                                        </Label>
+                                        <Select
+                                            value={newCompany.country}
+                                            onValueChange={(val) =>
+                                                setNewCompany(prev => ({
+                                                    ...prev,
+                                                    country: val,
+                                                    vatNumber: countryVatMap[val] || "" // auto-fill VAT
+                                                }))
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select country" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {countries.map((country) => (
+                                                    <SelectItem key={country} value={country}>{country}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* VAT Number */}
+                                    <div className="space-y-2">
+                                        <Label className="flex items-center gap-2 text-sm font-medium">
+                                            VAT
+                                        </Label>
+                                        <Input
+                                            placeholder="VAT Number"
+                                            value={newCompany.vatNumber}
+                                            onChange={(e) => setNewCompany(prev => ({ ...prev, vatNumber: e.target.value }))}
+                                            className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                                        />
+                                    </div>
+
                                 </div>
-
                                 {/* Role & Status */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
@@ -304,6 +359,7 @@ const ManageCompanies = () => {
                             </div>
                         </DialogContent>
                     </Dialog>
+
 
                 </div>
 
