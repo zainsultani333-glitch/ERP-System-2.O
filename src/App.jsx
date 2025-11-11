@@ -23,6 +23,7 @@ import SupplierInformation from "./pages/Inventory/SupplierInformation";
 import SalesHistory from "./pages/Inventory/SalesHistory";
 import TransactionTracking from "./pages/Inventory/TransactionTracking";
 import CustomerDefination from "./pages/Inventory/CustomerDefination";
+import CategoryFields from "./pages/Inventory/CategoryFields";
 // Company Management Pages
 import ManageCompanies from "./pages/CompanyManagement/ManageCompanies";
 import CompanySwitcher from "./pages/CompanyManagement/CompanySwitcher";
@@ -58,6 +59,7 @@ const App = () => (
           <Route path="/inventory/sales-history" element={<SalesHistory />} />
           <Route path="/inventory/transaction-traking" element={<TransactionTracking />} />
           <Route path="/inventory/customer-defination" element={<CustomerDefination />} />
+          <Route path="/inventory/category-fields" element={<CategoryFields />} />
 
           {/* Company Management Pages */}
           <Route path="/company-management/manage-companies" element={<ManageCompanies />} />

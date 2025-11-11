@@ -25,6 +25,7 @@ import {
   Warehouse,
   Briefcase,
   Key,
+  Tag,
 } from "lucide-react";
 import { ClipboardList, ArrowRightLeft } from "lucide-react";
 
@@ -54,6 +55,7 @@ const navigation = [
       { name: "Transaction Traking", href: "/inventory/transaction-traking", icon: ArrowRightLeft },
       { name: "WareHouse", href: "/inventory/warehouse", icon: Warehouse },
       { name: "Customer Defination", href: "/inventory/customer-defination", icon: User },
+      { name: "Category", href: "/inventory/category-fields", icon: Tag },
     ],
   },
   {
