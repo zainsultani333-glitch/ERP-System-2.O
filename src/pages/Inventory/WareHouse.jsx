@@ -1,13 +1,37 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Download, Warehouse, MapPin, User, Phone, Mail, Edit, Trash2, Eye, MoreVertical, Building2, Users, AlertCircle, List } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Download,
+  Warehouse,
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  Edit,
+  Trash2,
+  Eye,
+  MoreVertical,
+  Building2,
+  Users,
+  AlertCircle,
+  List,
+} from "lucide-react";
 import { toast } from "sonner";
+import axios from "axios";
 import {
   Select,
   SelectContent,
@@ -22,55 +46,52 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const mockWarehouseData = [
-  {
-    id: 1,
-    name: "Main Warehouse",
-    address: "Plot 45, Industrial Zone, Karachi, Pakistan",
-    incharge: {
-      name: "Ahmed Khan",
-      contact: "+92 300 1234567",
-      email: "ahmed.khan@company.com",
-    },
-    itemsInStock: 1250,
-    PurchaseValue: 2450000,
-  },
-  {
-    id: 2,
-    name: "North Branch Storage",
-    address: "Sector F-8, Near Ring Road, Lahore",
-    incharge: {
-      name: "Saba Ali",
-      contact: "+92 321 9876543",
-      email: "saba.ali@company.com",
-    },
-    itemsInStock: 890,
-    PurchaseValue: 1780000,
-  },
-  {
-    id: 3,
-    name: "Cold Storage Facility",
-    address: "Food Park, Multan Road, Faisalabad",
-    incharge: {
-      name: "Omar Farooq",
-      contact: "+92 333 5550192",
-      email: "omar@company.com",
-    },
-    itemsInStock: 620,
-    PurchaseValue: 3120000,
-  },
-];
-
 const WareHouse = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const filteredWarehouses = mockWarehouseData.filter((warehouse) =>
-    warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    warehouse.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    warehouse.incharge.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    warehouse.itemsInStock.toString().includes(searchTerm) ||
-    warehouse.PurchaseValue.toString().includes(searchTerm)
+  const [warehouses, setWarehouses] = useState([]);
+
+  // 🟢 Fetch Warehouse Data
+  const fetchWareHouse = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/warehouses`
+      );
+
+      if (response.data.success && Array.isArray(response.data.data)) {
+        const formattedData = response.data.data.map((w) => ({
+          id: w._id,
+          name: w.warehouseName || "-",
+          address: w.warehouseAddress || "-",
+          incharge: w.inCharge || { name: "-", contact: "-", email: "-" },
+          itemsInStock: w.itemsInStock || 0,
+          PurchaseValue: w.totalPurchaseValue || 0,
+        }));
+
+        setWarehouses(formattedData);
+      }
+    } catch (error) {
+      console.error("❌ Failed to fetch Warehouse:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWareHouse();
+  }, [fetchWareHouse]);
+
+  const filteredWarehouses = warehouses.filter(
+    (warehouse) =>
+      warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warehouse.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warehouse.incharge.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      warehouse.itemsInStock.toString().includes(searchTerm) ||
+      warehouse.PurchaseValue.toString().includes(searchTerm)
   );
 
   // Customize table columns
@@ -87,7 +108,9 @@ const WareHouse = () => {
   const [tempVisibleFields, setTempVisibleFields] = useState("");
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
-
+  const [loading, setLoading] = useState(true);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewWarehouse, setViewWarehouse] = useState(null);
   const handleCustomizeOpen = (open) => {
     setIsCustomizeOpen(open);
     if (open) setTempVisibleFields([...visibleFields]); // ✅ start with all checkboxes unchecked
@@ -103,24 +126,168 @@ const WareHouse = () => {
     toast.success("Warehouse report downloaded!");
   };
 
-  const handleSaveWarehouse = () => {
-    toast.success("Warehouse added successfully!");
-    setIsAddOpen(false);
+  const clearForm = () => {
+    setNewWarehouse({
+      id: "",
+      name: "",
+      address: "",
+      inchargeName: "",
+      inchargeContact: "",
+      inchargeEmail: "",
+    });
   };
 
-  const handleEdit = (id) => {
-    toast.success(`Editing warehouse #${id}`);
+  // Handle Save
+  const handleSaveWarehouse = async () => {
+    try {
+      setLoading(true);
+
+      // Construct payload from form fields (you’ll add state for these below)
+      const payload = {
+        warehouseName: newWarehouse.name,
+        warehouseAddress: newWarehouse.address,
+        inCharge: {
+          name: newWarehouse.inchargeName,
+          contact: newWarehouse.inchargeContact,
+          email: newWarehouse.inchargeEmail,
+        },
+      };
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/warehouses`,
+        payload
+      );
+
+      if (response.data.success) {
+        toast.success("✅ Warehouse added successfully!");
+        fetchWareHouse(); // Refresh list
+        setIsAddOpen(false);
+        clearForm(); // <-- clear form
+        setNewWarehouse({
+          name: "",
+          address: "",
+          inchargeName: "",
+          inchargeContact: "",
+          inchargeEmail: "",
+        });
+      } else {
+        toast.error("Failed to add warehouse!");
+      }
+    } catch (error) {
+      console.error("❌ Error adding warehouse:", error);
+      toast.error("Error adding warehouse!");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    toast.error(`Deleting warehouse #${id}`);
+  const [newWarehouse, setNewWarehouse] = useState({
+    name: "",
+    address: "",
+    inchargeName: "",
+    inchargeContact: "",
+    inchargeEmail: "",
+  });
+
+  // ------------------------ DELETE WAREHOUSE ------------------------
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this warehouse?")) return;
+
+    try {
+      setLoading(true);
+      const response = await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL}/warehouses/${id}`
+      );
+
+      if (response.data.success) {
+        toast.success("✅ Warehouse deleted successfully!");
+        fetchWareHouse(); // Refresh the list
+      } else {
+        toast.error("❌ Failed to delete warehouse!");
+      }
+    } catch (error) {
+      console.error("❌ Error deleting warehouse:", error);
+      toast.error("Error deleting warehouse!");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleView = (id) => {
-    toast.info(`Viewing warehouse details #${id}`);
+  // ------------------------ EDIT WAREHOUSE ------------------------
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editWarehouse, setEditWarehouse] = useState({
+    id: "",
+    name: "",
+    address: "",
+    inchargeName: "",
+    inchargeContact: "",
+    inchargeEmail: "",
+  });
+
+  const handleEdit = (warehouse) => {
+    setEditWarehouse({
+      id: warehouse.id,
+      name: warehouse.name,
+      address: warehouse.address,
+      inchargeName: warehouse.incharge?.name || "",
+      inchargeContact: warehouse.incharge?.contact || "",
+      inchargeEmail: warehouse.incharge?.email || "",
+    });
+    setIsEditOpen(true);
   };
 
-  const totalStockValue = mockWarehouseData.reduce((sum, w) => sum + w.PurchaseValue, 0);
+  // Handle Update
+  const handleUpdateWarehouse = async () => {
+    try {
+      setLoading(true);
+
+      const payload = {
+        warehouseName: newWarehouse.name,
+        warehouseAddress: newWarehouse.address,
+        inCharge: {
+          name: newWarehouse.inchargeName,
+          contact: newWarehouse.inchargeContact,
+          email: newWarehouse.inchargeEmail,
+        },
+      };
+
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/warehouses/${newWarehouse.id}`,
+        payload
+      );
+
+      if (response.data.success) {
+        toast.success("✅ Warehouse updated successfully!");
+        fetchWareHouse();
+        setIsAddOpen(false); // close dialog
+        clearForm(); // <-- clear form
+        setNewWarehouse({
+          name: "",
+          address: "",
+          inchargeName: "",
+          inchargeContact: "",
+          inchargeEmail: "",
+        });
+      } else {
+        toast.error("❌ Failed to update warehouse!");
+      }
+    } catch (error) {
+      console.error("❌ Error updating warehouse:", error);
+      toast.error("Error updating warehouse!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleView = (warehouse) => {
+    setViewWarehouse(warehouse); // store selected warehouse
+    setIsViewOpen(true); // open view dialog
+  };
+
+  const totalStockValue = warehouses.reduce(
+    (sum, w) => sum + w.PurchaseValue,
+    0
+  );
 
   return (
     <DashboardLayout>
@@ -168,7 +335,13 @@ const WareHouse = () => {
                     </Label>
                     <Input
                       placeholder="e.g., Main Warehouse"
-                      className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                      value={newWarehouse.name}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          name: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
@@ -180,7 +353,13 @@ const WareHouse = () => {
                     </Label>
                     <Input
                       placeholder="Full address with city"
-                      className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                      value={newWarehouse.address}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          address: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
@@ -192,19 +371,33 @@ const WareHouse = () => {
                     </Label>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Name</Label>
+                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                          Name
+                        </Label>
                         <Input
                           placeholder="Full name"
-                          className="border focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                          value={newWarehouse.inchargeName}
+                          onChange={(e) =>
+                            setNewWarehouse({
+                              ...newWarehouse,
+                              inchargeName: e.target.value,
+                            })
+                          }
                         />
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2 ">
                         <Label className="text-xs text-muted-foreground flex items-center gap-1">
                           <Phone className="w-3 h-3" /> Contact
                         </Label>
                         <Input
                           placeholder="+92 3XX XXXXXXX"
-                          className="border focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                          value={newWarehouse.inchargeContact}
+                          onChange={(e) =>
+                            setNewWarehouse({
+                              ...newWarehouse,
+                              inchargeContact: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div className="space-y-2">
@@ -214,7 +407,13 @@ const WareHouse = () => {
                         <Input
                           type="email"
                           placeholder="incharge@company.com"
-                          className="border focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                          value={newWarehouse.inchargeEmail}
+                          onChange={(e) =>
+                            setNewWarehouse({
+                              ...newWarehouse,
+                              inchargeEmail: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
@@ -222,9 +421,14 @@ const WareHouse = () => {
 
                   <Button
                     className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium"
-                    onClick={handleSaveWarehouse}
+                    onClick={
+                      () =>
+                        newWarehouse.id
+                          ? handleUpdateWarehouse() // update if id exists
+                          : handleSaveWarehouse() // save new warehouse
+                    }
                   >
-                    Save Warehouse
+                    {newWarehouse.id ? "Update Warehouse" : "Save Warehouse"}
                   </Button>
                 </div>
               </DialogContent>
@@ -238,8 +442,12 @@ const WareHouse = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Total Warehouses</p>
-                  <p className="text-2xl font-bold text-blue-900">{mockWarehouseData.length}</p>
+                  <p className="text-sm font-medium text-blue-700">
+                    Total Warehouses
+                  </p>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {warehouses.length}
+                  </p>
                 </div>
                 <div className="p-2 bg-blue-500/10 rounded-lg">
                   <Warehouse className="w-5 h-5 text-blue-600" />
@@ -252,9 +460,11 @@ const WareHouse = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Active Incharges</p>
+                  <p className="text-sm font-medium text-green-700">
+                    Active Incharges
+                  </p>
                   <p className="text-2xl font-bold text-green-900">
-                    {new Set(mockWarehouseData.map(w => w.incharge.name)).size}
+                    {new Set(warehouses.map((w) => w.incharge.name)).size}
                   </p>
                 </div>
                 <div className="p-2 bg-green-500/10 rounded-lg">
@@ -268,9 +478,15 @@ const WareHouse = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-amber-700">Total Items</p>
+                  <p className="text-sm font-medium text-amber-700">
+                    Total Items
+                  </p>
                   <p className="text-2xl font-bold text-amber-900">
-                    {new Set(mockWarehouseData.map(w => w.address.split(",").pop().trim())).size}
+                    {
+                      new Set(
+                        warehouses.map((w) => w.address.split(",").pop().trim())
+                      ).size
+                    }
                   </p>
                 </div>
                 <div className="p-2 bg-amber-500/10 rounded-lg">
@@ -284,7 +500,9 @@ const WareHouse = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-700">Total Stock Value</p>
+                  <p className="text-sm font-medium text-purple-700">
+                    Total Stock Value
+                  </p>
                   <p className="text-2xl font-bold text-purple-900">
                     PKR {totalStockValue.toLocaleString()}
                   </p>
@@ -313,137 +531,272 @@ const WareHouse = () => {
         </Card>
 
         {/* Warehouse Table */}
-        <Card className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent flex items-center gap-2">
-                <Warehouse className="w-5 h-5 text-primary" />
-                Warehouse Directory
-              </CardTitle>
-              <div className="flex items-center gap-3">
-                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                  {filteredWarehouses.length} warehouses
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setIsCustomizeOpen(true);
-                  }}
-                  className="bg-gradient-to-r from-primary to-primary/90 text-white"
-                >
-                  Customize
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
-                  <tr>
-                    {visibleFields.includes("sr") && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Sr</th>
-                    )}
-                    {visibleFields.includes("name") && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Warehouse</th>
-                    )}
-                    {visibleFields.includes("address") && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Address</th>
-                    )}
-                    {visibleFields.includes("incharge") && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Incharge</th>
-                    )}
-                    {visibleFields.includes("itemsInStock") && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Items in Stock</th>
-                    )}
-                    {visibleFields.includes("PurchaseValue") && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Value</th>
-                    )}
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
 
-                <tbody className="divide-y divide-border/30">
-                  {filteredWarehouses.map((warehouse, index) => (
-                    <tr key={warehouse.id} className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]">
-                      {visibleFields.includes("sr") && <td className="px-6 py-4 font-semibold">{index + 1}</td>}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-muted-foreground font-medium">
+              Loading warehouse data...
+            </p>
+          </div>
+        ) : (
+          <Card className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent flex items-center gap-2">
+                  <Warehouse className="w-5 h-5 text-primary" />
+                  Warehouse Directory
+                </CardTitle>
+                <div className="flex items-center gap-3">
+                  <Badge
+                    variant="secondary"
+                    className="bg-primary/10 text-primary border-primary/20"
+                  >
+                    {filteredWarehouses.length} warehouses
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsCustomizeOpen(true);
+                    }}
+                    className="bg-gradient-to-r from-primary to-primary/90 text-white"
+                  >
+                    Customize
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
+                    <tr>
+                      {visibleFields.includes("sr") && (
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                          Sr
+                        </th>
+                      )}
                       {visibleFields.includes("name") && (
-                        <td className="px-6 py-4">
-                          <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200 flex items-center gap-2">
-                            <Warehouse className="w-4 h-4 text-primary/60" />
-                            {warehouse.name}
-                          </div>
-                        </td>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                          Warehouse
+                        </th>
                       )}
                       {visibleFields.includes("address") && (
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="w-4 h-4 text-amber-600" />
-                            <span>{warehouse.address}</span>
-                          </div>
-                        </td>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                          Address
+                        </th>
                       )}
                       {visibleFields.includes("incharge") && (
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-blue-600" />
-                            <span className="font-medium">{warehouse.incharge.name}</span>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-60 hover:opacity-100 transition-opacity">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-56">
-                                <DropdownMenuItem className="flex items-center gap-2"><Phone className="w-3 h-3" />{warehouse.incharge.contact}</DropdownMenuItem>
-                                <DropdownMenuItem className="flex items-center gap-2"><Mail className="w-3 h-3" />{warehouse.incharge.email}</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </td>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                          Incharge
+                        </th>
                       )}
                       {visibleFields.includes("itemsInStock") && (
-                        <td className="px-6 py-4">
-                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-emerald-200">{warehouse.itemsInStock.toLocaleString()}</Badge>
-                        </td>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                          Items in Stock
+                        </th>
                       )}
                       {visibleFields.includes("PurchaseValue") && (
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-foreground">PKR {warehouse.PurchaseValue.toLocaleString()}</div>
-                        </td>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                          Value
+                        </th>
                       )}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleView(warehouse.id)} className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 rounded-lg" title="View Details">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(warehouse.id)} className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-all duration-200 rounded-lg" title="Edit Warehouse">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(warehouse.id)} className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg" title="Delete Warehouse">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
+                  </thead>
 
-              </table>
+                  <tbody className="divide-y divide-border/30">
+                    {warehouses.map((warehouse, index) => (
+                      <tr
+                        key={warehouse.id}
+                        className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
+                      >
+                        {visibleFields.includes("sr") && (
+                          <td className="px-6 py-4 font-semibold">
+                            {index + 1}
+                          </td>
+                        )}
+                        {visibleFields.includes("name") && (
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200 flex items-center gap-2">
+                              <Warehouse className="w-4 h-4 text-primary/60" />
+                              {warehouse.name}
+                            </div>
+                          </td>
+                        )}
+                        {visibleFields.includes("address") && (
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <MapPin className="w-4 h-4 text-amber-600" />
+                              <span>{warehouse.address}</span>
+                            </div>
+                          </td>
+                        )}
+                        {visibleFields.includes("incharge") && (
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-blue-600" />
+                              <span className="font-medium">
+                                {warehouse.incharge?.name}
+                              </span>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 opacity-60 hover:opacity-100 transition-opacity"
+                                  >
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-56"
+                                >
+                                  <DropdownMenuItem className="flex items-center gap-2">
+                                    <Phone className="w-3 h-3" />
+                                    {warehouse.incharge?.contact}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="flex items-center gap-2">
+                                    <Mail className="w-3 h-3" />
+                                    {warehouse.incharge?.email}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </td>
+                        )}
+                        {visibleFields.includes("itemsInStock") && (
+                          <td className="px-6 py-4">
+                            <Badge
+                              variant="secondary"
+                              className="bg-emerald-100 text-emerald-700 border-emerald-200"
+                            >
+                              {warehouse.itemsInStock.toLocaleString()}
+                            </Badge>
+                          </td>
+                        )}
+                        {visibleFields.includes("PurchaseValue") && (
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-foreground">
+                              PKR {warehouse.PurchaseValue.toLocaleString()}
+                            </div>
+                          </td>
+                        )}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleView(warehouse)}
+                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 rounded-lg"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setNewWarehouse({
+                                  id: warehouse.id,
+                                  name: warehouse.name,
+                                  address: warehouse.address,
+                                  inchargeName: warehouse.incharge?.name || "",
+                                  inchargeContact:
+                                    warehouse.incharge?.contact || "",
+                                  inchargeEmail:
+                                    warehouse.incharge?.email || "",
+                                });
+                                setIsAddOpen(true); // Open the same dialog
+                              }}
+                              className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-all duration-200 rounded-lg"
+                              title="Edit Warehouse"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
 
-              {filteredWarehouses.length === 0 && (
-                <div className="text-center py-12">
-                  <Warehouse className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground font-medium text-lg">No warehouses found</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Try adjusting your search or add a new warehouse
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(warehouse.id)}
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg"
+                              title="Delete Warehouse"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Handle View UI */}
+                <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+                  <DialogContent className="max-w-md bg-white/95 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl">
+                    <DialogHeader className="pb-3 border-b border-border/30">
+                      <DialogTitle className="text-lg font-semibold text-gray-900">
+                        🏢 Warehouse Details
+                      </DialogTitle>
+                    </DialogHeader>
+                    {viewWarehouse && (
+                      <div className="space-y-3 py-4">
+                        <p>
+                          <strong>Name:</strong> {viewWarehouse.name}
+                        </p>
+                        <p>
+                          <strong>Address:</strong> {viewWarehouse.address}
+                        </p>
+                        <p>
+                          <strong>Incharge Name:</strong>{" "}
+                          {viewWarehouse.incharge?.name}
+                        </p>
+                        <p>
+                          <strong>Incharge Contact:</strong>{" "}
+                          {viewWarehouse.incharge?.contact}
+                        </p>
+                        <p>
+                          <strong>Incharge Email:</strong>{" "}
+                          {viewWarehouse.incharge?.email}
+                        </p>
+                        <p>
+                          <strong>Items in Stock:</strong>{" "}
+                          {viewWarehouse.itemsInStock}
+                        </p>
+                        <p>
+                          <strong>Purchase Value:</strong> PKR{" "}
+                          {viewWarehouse.PurchaseValue.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    <Button
+                      className="w-full mt-2 py-3 bg-gradient-to-r from-primary to-primary/90 text-white font-semibold rounded-xl"
+                      onClick={() => setIsViewOpen(false)}
+                    >
+                      Close
+                    </Button>
+                  </DialogContent>
+                </Dialog>
+
+                {filteredWarehouses.length === 0 && (
+                  <div className="text-center py-12">
+                    <Warehouse className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <p className="text-muted-foreground font-medium text-lg">
+                      No warehouses found
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Try adjusting your search or add a new warehouse
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Dialog open={isCustomizeOpen} onOpenChange={handleCustomizeOpen}>
@@ -452,7 +805,9 @@ const WareHouse = () => {
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
               ⚙️ Customize Display
             </DialogTitle>
-            <p className="text-sm text-gray-500">Choose which columns to display in your table.</p>
+            <p className="text-sm text-gray-500">
+              Choose which columns to display in your table.
+            </p>
           </DialogHeader>
 
           {fieldLimitAlert && (
@@ -470,13 +825,17 @@ const WareHouse = () => {
               { key: "itemsInStock", label: "Items in Stock" },
               { key: "PurchaseValue", label: "Value" },
             ].map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer border border-transparent hover:border-primary/30 hover:bg-primary/5">
+              <label
+                key={key}
+                className="flex items-center gap-3 p-3 rounded-xl cursor-pointer border border-transparent hover:border-primary/30 hover:bg-primary/5"
+              >
                 <input
                   type="checkbox"
                   checked={tempVisibleFields.includes(key)}
                   onChange={() => {
-                    setTempVisibleFields(prev => {
-                      if (prev.includes(key)) return prev.filter(f => f !== key);
+                    setTempVisibleFields((prev) => {
+                      if (prev.includes(key))
+                        return prev.filter((f) => f !== key);
                       if (prev.length >= 6) {
                         setFieldLimitAlert(true);
                         setTimeout(() => setFieldLimitAlert(false), 2500);
@@ -501,8 +860,6 @@ const WareHouse = () => {
           </Button>
         </DialogContent>
       </Dialog>
-
-
     </DashboardLayout>
   );
 };
