@@ -83,18 +83,17 @@ const SupplierInformation = () => {
     "totalSpendings",
     "orders",
   ]);
+  const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
 
   // temporary dialog fields
   const [tempVisibleFields, setTempVisibleFields] = useState("");
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
 
-  const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
-
   // when dialog opens, copy the actual visible fields
   const handleCustomizeOpen = (open) => {
     setIsCustomizeOpen(open);
     if (open) {
-      setTempVisibleFields([]); // <-- start with nothing selected
+      setTempVisibleFields([...visibleFields]); // <-- start with nothing selected
     }
   };
 

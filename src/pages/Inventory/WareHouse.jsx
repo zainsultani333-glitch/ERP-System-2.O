@@ -73,6 +73,32 @@ const WareHouse = () => {
     warehouse.PurchaseValue.toString().includes(searchTerm)
   );
 
+  // Customize table columns
+  const [visibleFields, setVisibleFields] = useState([
+    "sr",
+    "name",
+    "address",
+    "incharge",
+    "itemsInStock",
+    "PurchaseValue",
+  ]);
+
+  // Temporary selection when opening dialog
+  const [tempVisibleFields, setTempVisibleFields] = useState("");
+  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+  const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
+
+  const handleCustomizeOpen = (open) => {
+    setIsCustomizeOpen(open);
+    if (open) setTempVisibleFields([...visibleFields]); // ✅ start with all checkboxes unchecked
+  };
+
+  const handleApplyChanges = () => {
+    setVisibleFields(tempVisibleFields);
+    setIsCustomizeOpen(false);
+    toast.success("Display settings updated!");
+  };
+
   const handleDownload = () => {
     toast.success("Warehouse report downloaded!");
   };
@@ -294,9 +320,21 @@ const WareHouse = () => {
                 <Warehouse className="w-5 h-5 text-primary" />
                 Warehouse Directory
               </CardTitle>
-              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                {filteredWarehouses.length} warehouses
-              </Badge>
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                  {filteredWarehouses.length} warehouses
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsCustomizeOpen(true);
+                  }}
+                  className="bg-gradient-to-r from-primary to-primary/90 text-white"
+                >
+                  Customize
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -304,100 +342,86 @@ const WareHouse = () => {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Sr</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Warehouse</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Address</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Incharge</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Items in Stock</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider"> Value</th>
+                    {visibleFields.includes("sr") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Sr</th>
+                    )}
+                    {visibleFields.includes("name") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Warehouse</th>
+                    )}
+                    {visibleFields.includes("address") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Address</th>
+                    )}
+                    {visibleFields.includes("incharge") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Incharge</th>
+                    )}
+                    {visibleFields.includes("itemsInStock") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Items in Stock</th>
+                    )}
+                    {visibleFields.includes("PurchaseValue") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Value</th>
+                    )}
                     <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
+
                 <tbody className="divide-y divide-border/30">
                   {filteredWarehouses.map((warehouse, index) => (
-                    <tr
-                      key={warehouse.id}
-                      className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
-                    >
-                      <td className="px-6 py-4 font-semibold">{index + 1}</td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200 flex items-center gap-2">
-                          <Warehouse className="w-4 h-4 text-primary/60" />
-                          {warehouse.name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="w-4 h-4 text-amber-600" />
-                          <span>{warehouse.address}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-blue-600" />
-                          <span className="font-medium">{warehouse.incharge.name}</span>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 opacity-60 hover:opacity-100 transition-opacity"
-                              >
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                              <DropdownMenuItem className="flex items-center gap-2">
-                                <Phone className="w-3 h-3" />
-                                {warehouse.incharge.contact}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="flex items-center gap-2">
-                                <Mail className="w-3 h-3" />
-                                {warehouse.incharge.email}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                            {warehouse.itemsInStock.toLocaleString()}
-                          </Badge>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-foreground">
-                          PKR {warehouse.PurchaseValue.toLocaleString()}
-                        </div>
-                      </td>
+                    <tr key={warehouse.id} className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]">
+                      {visibleFields.includes("sr") && <td className="px-6 py-4 font-semibold">{index + 1}</td>}
+                      {visibleFields.includes("name") && (
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200 flex items-center gap-2">
+                            <Warehouse className="w-4 h-4 text-primary/60" />
+                            {warehouse.name}
+                          </div>
+                        </td>
+                      )}
+                      {visibleFields.includes("address") && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <MapPin className="w-4 h-4 text-amber-600" />
+                            <span>{warehouse.address}</span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleFields.includes("incharge") && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-blue-600" />
+                            <span className="font-medium">{warehouse.incharge.name}</span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-60 hover:opacity-100 transition-opacity">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem className="flex items-center gap-2"><Phone className="w-3 h-3" />{warehouse.incharge.contact}</DropdownMenuItem>
+                                <DropdownMenuItem className="flex items-center gap-2"><Mail className="w-3 h-3" />{warehouse.incharge.email}</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      )}
+                      {visibleFields.includes("itemsInStock") && (
+                        <td className="px-6 py-4">
+                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-emerald-200">{warehouse.itemsInStock.toLocaleString()}</Badge>
+                        </td>
+                      )}
+                      {visibleFields.includes("PurchaseValue") && (
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-foreground">PKR {warehouse.PurchaseValue.toLocaleString()}</div>
+                        </td>
+                      )}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleView(warehouse.id)}
-                            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 rounded-lg"
-                            title="View Details"
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => handleView(warehouse.id)} className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 rounded-lg" title="View Details">
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(warehouse.id)}
-                            className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-all duration-200 rounded-lg"
-                            title="Edit Warehouse"
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(warehouse.id)} className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-all duration-200 rounded-lg" title="Edit Warehouse">
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(warehouse.id)}
-                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg"
-                            title="Delete Warehouse"
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(warehouse.id)} className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg" title="Delete Warehouse">
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
@@ -405,6 +429,7 @@ const WareHouse = () => {
                     </tr>
                   ))}
                 </tbody>
+
               </table>
 
               {filteredWarehouses.length === 0 && (
@@ -420,6 +445,64 @@ const WareHouse = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isCustomizeOpen} onOpenChange={handleCustomizeOpen}>
+        <DialogContent className="max-w-md bg-white/95 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl">
+          <DialogHeader className="pb-3 border-b border-border/30">
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+              ⚙️ Customize Display
+            </DialogTitle>
+            <p className="text-sm text-gray-500">Choose which columns to display in your table.</p>
+          </DialogHeader>
+
+          {fieldLimitAlert && (
+            <div className="mb-4 p-3 rounded bg-red-100 border border-red-400 text-red-700 font-medium text-center">
+              You can select a maximum of 6 fields only!
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 py-6 px-1">
+            {[
+              { key: "sr", label: "Serial Number" },
+              { key: "name", label: "Warehouse" },
+              { key: "address", label: "Address" },
+              { key: "incharge", label: "Incharge" },
+              { key: "itemsInStock", label: "Items in Stock" },
+              { key: "PurchaseValue", label: "Value" },
+            ].map(({ key, label }) => (
+              <label key={key} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer border border-transparent hover:border-primary/30 hover:bg-primary/5">
+                <input
+                  type="checkbox"
+                  checked={tempVisibleFields.includes(key)}
+                  onChange={() => {
+                    setTempVisibleFields(prev => {
+                      if (prev.includes(key)) return prev.filter(f => f !== key);
+                      if (prev.length >= 6) {
+                        setFieldLimitAlert(true);
+                        setTimeout(() => setFieldLimitAlert(false), 2500);
+                        return prev;
+                      }
+                      return [...prev, key];
+                    });
+                  }}
+                  className="peer appearance-none w-5 h-5 border border-gray-300 dark:border-gray-700 rounded-md checked:bg-gradient-to-br checked:from-primary checked:to-primary/70 transition-all duration-200 flex items-center justify-center relative
+            after:content-['✓'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+
+          <Button
+            className="w-full mt-2 py-3 bg-gradient-to-r from-primary to-primary/90 text-white font-semibold rounded-xl"
+            onClick={handleApplyChanges}
+          >
+            ✨ Apply Changes
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+
     </DashboardLayout>
   );
 };

@@ -71,7 +71,7 @@ const SalesHistory = () => {
   ]);
 
   // Temporary selection when opening dialog
-  const [tempVisibleFields, setTempVisibleFields] = useState([]);
+  const [tempVisibleFields, setTempVisibleFields] = useState("");
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
 

@@ -60,6 +60,30 @@ const StockPurchaseDetails = () => {
     item.itemCode.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // ✅ Fields visibility state
+  const [visibleFields, setVisibleFields] = useState([
+    "sr", "itemCode", "itemName", "openingStock", "purchaseRate",
+    "sellingPrice", "wholesalePrice", "location", "minStock", "actions"
+  ]);
+
+  // Temporary selection when opening dialog
+  const [tempVisibleFields, setTempVisibleFields] = useState([]);
+  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+  const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
+
+  const handleCustomizeOpen = (open) => {
+    setIsCustomizeOpen(open);
+    if (open) {
+      setTempVisibleFields(visibleFields); // copy current visible fields
+    }
+  };
+
+  const handleApplyChanges = () => {
+    setVisibleFields(tempVisibleFields);
+    setIsCustomizeOpen(false);
+    toast.success("Display settings updated!");
+  };
+
   const handleDownload = () => {
     toast.success("Stock & purchase report downloaded!");
   };
@@ -335,9 +359,21 @@ const StockPurchaseDetails = () => {
                 <Warehouse className="w-5 h-5 text-primary" />
                 Stock Inventory
               </CardTitle>
-              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                {filteredStock.length} items
-              </Badge>
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                  {filteredStock.length} items
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsCustomizeOpen(true);
+                  }}
+                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl text-white transition-all duration-200"
+                >
+                  Customize
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -345,135 +381,90 @@ const StockPurchaseDetails = () => {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Sr</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Item Code</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Item Name</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Opening Stock</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Purchase Rate</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Selling Price</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Wholesale Price</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Location</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Min Stock</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Actions</th>
+                    {visibleFields.includes("sr") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Sr</th>}
+                    {visibleFields.includes("itemCode") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Item Code</th>}
+                    {visibleFields.includes("itemName") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Item Name</th>}
+                    {visibleFields.includes("openingStock") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Opening Stock</th>}
+                    {visibleFields.includes("purchaseRate") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Purchase Rate</th>}
+                    {visibleFields.includes("sellingPrice") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Selling Price</th>}
+                    {visibleFields.includes("wholesalePrice") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Wholesale Price</th>}
+                    {visibleFields.includes("location") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Location</th>}
+                    {visibleFields.includes("minStock") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Min Stock</th>}
+                    {visibleFields.includes("actions") && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Actions</th>}
                   </tr>
                 </thead>
+
                 <tbody className="divide-y divide-border/30">
                   {filteredStock.map((item, index) => (
-                    <tr
-                      key={item.id}
-                      className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
-                    >
-                      <td className="px-6 py-4 font-semibold">{index + 1}</td>
-                      <td className="px-6 py-4">
-                        <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
-                          {item.itemCode}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
-                          {item.itemName}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-bold text-lg ${getStockStatus(item.openingStock, item.minStockLevel) === "critical"
-                            ? "text-red-600"
-                            : getStockStatus(item.openingStock, item.minStockLevel) === "warning"
-                              ? "text-amber-600"
-                              : "text-green-600"
-                            }`}>
-                            {item.openingStock}
-                          </span>
-                          {getStockStatus(item.openingStock, item.minStockLevel) === "critical" && (
-                            <AlertTriangle className="w-4 h-4 text-red-500" />
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-foreground bg-blue-50 px-3 py-1 rounded-full text-sm border border-blue-200">
-                          PKR {item.purchaseRate}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm border border-green-200">
-                          PKR {item.sellingPrice}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {item.wholesalePrice ? (
-                          <div className="font-medium text-purple-600 bg-purple-50 px-3 py-1 rounded-full text-sm border border-purple-200">
-                            PKR {item.wholesalePrice}
+                    <tr key={item.id} className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]">
+                      {visibleFields.includes("sr") && <td className="px-6 py-4 font-semibold">{index + 1}</td>}
+                      {visibleFields.includes("itemCode") && (
+                        <td className="px-6 py-4">
+                          <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
+                            {item.itemCode}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground italic text-sm bg-muted/30 px-3 py-1 rounded-full border border-dashed border-muted-foreground/30">
-                            Not set
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge
-                          variant="outline"
-                          className={`${getLocationColor(item.location)} border-2 font-medium text-xs px-2 py-1 rounded-full flex items-center gap-1`}
-                        >
-                          <MapPin className="w-3 h-3" />
-                          {item.location}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className={`font-bold ${item.openingStock <= item.minStockLevel
-                          ? "text-red-600 bg-red-50 border-red-200"
-                          : "text-green-600 bg-green-50 border-green-200"
-                          } px-3 py-1 rounded-full text-sm border inline-block`}>
-                          {item.minStockLevel}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleView(item.id)}
-                            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 rounded-lg"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(item.id)}
-                            className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-all duration-200 rounded-lg"
-                            title="Edit Stock"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          {getStockStatus(item.openingStock, item.minStockLevel) === "critical" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRestock(item.id)}
-                              className="h-8 w-8 p-0 hover:bg-amber-50 hover:text-amber-600 transition-all duration-200 rounded-lg"
-                              title="Quick Restock"
-                            >
-                              <RefreshCw className="w-4 h-4" />
+                        </td>
+                      )}
+                      {visibleFields.includes("itemName") && (
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
+                            {item.itemName}
+                          </div>
+                        </td>
+                      )}
+                      {visibleFields.includes("openingStock") && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-bold text-lg ${getStockStatus(item.openingStock, item.minStockLevel) === "critical"
+                              ? "text-red-600"
+                              : getStockStatus(item.openingStock, item.minStockLevel) === "warning"
+                                ? "text-amber-600"
+                                : "text-green-600"
+                              }`}>
+                              {item.openingStock}
+                            </span>
+                            {getStockStatus(item.openingStock, item.minStockLevel) === "critical" && (
+                              <AlertTriangle className="w-4 h-4 text-red-500" />
+                            )}
+                          </div>
+                        </td>
+                      )}
+                      {visibleFields.includes("purchaseRate") && <td className="px-6 py-4">PKR {item.purchaseRate}</td>}
+                      {visibleFields.includes("sellingPrice") && <td className="px-6 py-4">PKR {item.sellingPrice}</td>}
+                      {visibleFields.includes("wholesalePrice") && (
+                        <td className="px-6 py-4">{item.wholesalePrice ?? "Not set"}</td>
+                      )}
+                      {visibleFields.includes("location") && (
+                        <td className="px-6 py-4">{item.location}</td>
+                      )}
+                      {visibleFields.includes("minStock") && (
+                        <td className="px-6 py-4">{item.minStockLevel}</td>
+                      )}
+                      {visibleFields.includes("actions") && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleView(item.id)} title="View">
+                              <Eye className="w-4 h-4" />
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(item.id)}
-                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg"
-                            title="Delete Entry"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-
-                        </div>
-                      </td>
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(item.id)} title="Edit">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            {getStockStatus(item.openingStock, item.minStockLevel) === "critical" && (
+                              <Button variant="ghost" size="sm" onClick={() => handleRestock(item.id)} title="Restock">
+                                <RefreshCw className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} title="Delete">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
+
 
               {filteredStock.length === 0 && (
                 <div className="text-center py-12">
@@ -488,6 +479,85 @@ const StockPurchaseDetails = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isCustomizeOpen} onOpenChange={handleCustomizeOpen}>
+        <DialogContent className="max-w-md bg-gradient-to-b from-white/95 to-white/80 dark:from-gray-900/95 dark:to-gray-900/80 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl transition-all duration-500 ease-in-out">
+
+          {/* Header */}
+          <DialogHeader className="pb-3 border-b border-border/30">
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+                ⚙️
+              </span>
+              Customize Display
+            </DialogTitle>
+            <p className="text-sm text-gray-500 dark:text-gray-400 pl-10">
+              Choose which columns to display in your stock table.
+            </p>
+          </DialogHeader>
+
+          {/* Alert for max fields */}
+          {fieldLimitAlert && (
+            <div className="mb-4 p-3 rounded bg-red-100 border border-red-400 text-red-700 font-medium text-center animate-fadeIn">
+              You can select a maximum of 6 fields only!
+            </div>
+          )}
+
+          {/* Options Grid */}
+          <div className="grid grid-cols-2 gap-3 py-6 px-1">
+            {[
+              { key: "sr", label: "Sr" },
+              { key: "itemCode", label: "Item Code" },
+              { key: "itemName", label: "Item Name" },
+              { key: "openingStock", label: "Opening Stock" },
+              { key: "purchaseRate", label: "Purchase Rate" },
+              { key: "sellingPrice", label: "Selling Price" },
+              { key: "wholesalePrice", label: "Wholesale Price" },
+              { key: "location", label: "Location" },
+              { key: "minStock", label: "Min Stock" },
+              { key: "actions", label: "Actions" },
+            ].map(({ key, label }) => (
+              <label
+                key={key}
+                className="group flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 border border-transparent hover:border-primary/30 hover:bg-primary/5"
+              >
+                <input
+                  type="checkbox"
+                  checked={tempVisibleFields.includes(key)}
+                  onChange={() => {
+                    setTempVisibleFields((prev) => {
+                      if (prev.includes(key)) {
+                        return prev.filter((f) => f !== key);
+                      } else if (prev.length >= 6) {
+                        setFieldLimitAlert(true);
+                        setTimeout(() => setFieldLimitAlert(false), 2500);
+                        return prev;
+                      } else {
+                        return [...prev, key];
+                      }
+                    });
+                  }}
+                  className="peer appearance-none w-5 h-5 border border-gray-300 dark:border-gray-700 rounded-md checked:bg-gradient-to-br checked:from-primary checked:to-primary/70 transition-all duration-200 flex items-center justify-center relative
+            after:content-['✓'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">
+                  {label}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {/* Apply Button */}
+          <Button
+            className="w-full mt-2 py-3 bg-gradient-to-r from-primary via-primary/80 to-primary/70 text-white font-semibold rounded-xl shadow-lg hover:shadow-primary/40 hover:-translate-y-[1px] transition-all duration-300"
+            onClick={handleApplyChanges}
+          >
+            ✨ Apply Changes
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+
     </DashboardLayout>
   );
 };

@@ -71,16 +71,29 @@ const TransactionTracking = () => {
   const handleView = (id) => toast.info(`Viewing transaction details for #${id}`);
   const handleRefresh = (id) => toast.success(`Refreshing data for #${id}`);
 
+  // ✅ Fields visibility state
+const [visibleFields, setVisibleFields] = useState([
+  "sr",
+  "totalPurchasedQty",
+  "totalSoldQty",
+  "currentStockBalance",
+  "lastSaleDate",
+  "lastPurchaseDate",
+]);
+  const [tempVisibleFields, setTempVisibleFields] = useState([]);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
-  const [tempVisibleFields, setTempVisibleFields] = useState([
-    "id",
-    "totalPurchasedQty",
-    "totalSoldQty",
-    "currentStockBalance",
-    "lastSaleDate",
-    "lastPurchaseDate",
-  ]);
+
+  const handleCustomizeOpen = (open) => {
+    setIsCustomizeOpen(open);
+    if (open) setTempVisibleFields(visibleFields); // copy current settings
+  };
+
+  const handleApplyChanges = () => {
+    setVisibleFields(tempVisibleFields);
+    setIsCustomizeOpen(false);
+    toast.success("Display settings updated!");
+  };
 
   return (
     <DashboardLayout>
@@ -170,59 +183,63 @@ const TransactionTracking = () => {
         <Card className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 pb-4">
             <div className="flex items-center justify-between">
+              {/* Left side: Title */}
               <CardTitle className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
                 Transaction Records
               </CardTitle>
-              <Badge
-                variant="secondary"
-                className="bg-primary/10 text-primary border-primary/20"
-              >
-                {filteredData.length} records
-              </Badge>
+
+              {/* Right side: Records + Customize button */}
               <div className="flex items-center gap-3">
+                <Badge
+                  variant="secondary"
+                  className="bg-primary/10 text-primary border-primary/20"
+                >
+                  {filteredData.length} records
+                </Badge>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsCustomizeOpen(true)}
-                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl text-white transition-all duration-200"
+                  className="bg-gradient-to-r from-primary to-primary/90 text-white"
                 >
                   Customize
                 </Button>
               </div>
             </div>
           </CardHeader>
+
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
                   <tr className="whitespace-nowrap">
-                    {tempVisibleFields.includes("id") && (
+                    {visibleFields.includes("sr") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                         Sr
                       </th>
                     )}
-                    {tempVisibleFields.includes("totalPurchasedQty") && (
+                    {visibleFields.includes("totalPurchasedQty") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                         Total Purchased Qty
                       </th>
                     )}
-                    {tempVisibleFields.includes("totalSoldQty") && (
+                    {visibleFields.includes("totalSoldQty") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                         Total Sold Qty
                       </th>
                     )}
-                    {tempVisibleFields.includes("currentStockBalance") && (
+                    {visibleFields.includes("currentStockBalance") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                         Current Stock Balance
                       </th>
                     )}
-                    {tempVisibleFields.includes("lastSaleDate") && (
+                    {visibleFields.includes("lastSaleDate") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                         Last Sale Date
                       </th>
                     )}
-                    {tempVisibleFields.includes("lastPurchaseDate") && (
+                    {visibleFields.includes("lastPurchaseDate") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                         Last Purchase Date
                       </th>
@@ -234,22 +251,29 @@ const TransactionTracking = () => {
                 </thead>
 
                 <tbody className="divide-y divide-border/30">
-                  {filteredData.map((item) => (
-                    <tr key={item.id} className="group hover:bg-primary/5 transition-all duration-300">
-                      {tempVisibleFields.includes("id") && <td className="px-6 py-4">{item.id}</td>}
-                      {tempVisibleFields.includes("totalPurchasedQty") && (
+                  {filteredData.map((item, index) => (
+                    <tr
+                      key={item.id}
+                      className="group hover:bg-primary/5 transition-all duration-300"
+                    >
+                      {visibleFields.includes("sr") && <td className="px-6 py-4">{index + 1}</td>}
+                      {visibleFields.includes("totalPurchasedQty") && (
                         <td className="px-6 py-4">{item.totalPurchasedQty}</td>
                       )}
-                      {tempVisibleFields.includes("totalSoldQty") && (
-                        <td className="px-6 py-4 text-green-700 font-semibold">{item.totalSoldQty}</td>
+                      {visibleFields.includes("totalSoldQty") && (
+                        <td className="px-6 py-4 text-green-700 font-semibold">
+                          {item.totalSoldQty}
+                        </td>
                       )}
-                      {tempVisibleFields.includes("currentStockBalance") && (
-                        <td className="px-6 py-4 font-bold text-blue-700">{item.currentStockBalance}</td>
+                      {visibleFields.includes("currentStockBalance") && (
+                        <td className="px-6 py-4 font-bold text-blue-700">
+                          {item.currentStockBalance}
+                        </td>
                       )}
-                      {tempVisibleFields.includes("lastSaleDate") && (
+                      {visibleFields.includes("lastSaleDate") && (
                         <td className="px-6 py-4 text-sm">{item.lastSaleDate}</td>
                       )}
-                      {tempVisibleFields.includes("lastPurchaseDate") && (
+                      {visibleFields.includes("lastPurchaseDate") && (
                         <td className="px-6 py-4 text-sm">{item.lastPurchaseDate}</td>
                       )}
                       <td className="px-6 py-4">
@@ -287,16 +311,14 @@ const TransactionTracking = () => {
         </Card>
       </div>
 
-      <Dialog open={isCustomizeOpen} onOpenChange={setIsCustomizeOpen}>
-        <DialogContent className="max-w-md bg-gradient-to-b from-white/95 to-white/80 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl transition-all duration-500">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+      <Dialog open={isCustomizeOpen} onOpenChange={handleCustomizeOpen}>
+        <DialogContent className="max-w-md bg-gradient-to-b from-white/95 to-white/80 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl">
+          <DialogHeader className="pb-3 border-b border-border/30">
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">⚙️</span>
               Customize Display
             </DialogTitle>
-            <p className="text-sm text-gray-500 pl-10">
-              Choose which columns to display in your table.
-            </p>
+            <p className="text-sm text-gray-500 pl-10">Choose which columns to display in your table.</p>
           </DialogHeader>
 
           {fieldLimitAlert && (
@@ -307,14 +329,14 @@ const TransactionTracking = () => {
 
           <div className="grid grid-cols-2 gap-3 py-6 px-1">
             {[
-              { key: "id", label: "Sr" },
+              { key: "sr", label: "Serial Number" },
               { key: "totalPurchasedQty", label: "Total Purchased Qty" },
               { key: "totalSoldQty", label: "Total Sold Qty" },
               { key: "currentStockBalance", label: "Current Stock Balance" },
               { key: "lastSaleDate", label: "Last Sale Date" },
               { key: "lastPurchaseDate", label: "Last Purchase Date" },
             ].map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer border border-transparent hover:border-primary/30 hover:bg-primary/5">
+              <label key={key} className="group flex items-center gap-3 p-3 rounded-xl cursor-pointer border border-transparent hover:border-primary/30 hover:bg-primary/5">
                 <input
                   type="checkbox"
                   checked={tempVisibleFields.includes(key)}
@@ -329,18 +351,19 @@ const TransactionTracking = () => {
                       return [...prev, key];
                     });
                   }}
-                  className="w-5 h-5 border border-gray-300 rounded-md checked:bg-gradient-to-br checked:from-primary checked:to-primary/70"
+                  className="peer appearance-none w-5 h-5 border border-gray-300 dark:border-gray-700 rounded-md checked:bg-gradient-to-br checked:from-primary checked:to-primary/70 transition-all duration-200 flex items-center justify-center relative
+            after:content-['✓'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
                 />
-                <span className="text-sm font-medium text-gray-700">{label}</span>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">{label}</span>
               </label>
             ))}
           </div>
 
           <Button
             className="w-full mt-2 py-3 bg-gradient-to-r from-primary via-primary/80 to-primary/70 text-white font-semibold rounded-xl"
-            onClick={() => setIsCustomizeOpen(false)}
+            onClick={handleApplyChanges}
           >
-            Apply Changes
+            ✨ Apply Changes
           </Button>
         </DialogContent>
       </Dialog>

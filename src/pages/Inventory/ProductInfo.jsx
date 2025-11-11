@@ -53,6 +53,37 @@ const ProductInfo = () => {
     item.itemCode.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Customize popup
+  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+  const [tempVisibleFields, setTempVisibleFields] = useState([]);
+  const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
+
+  // Default visible columns
+  const [visibleFields, setVisibleFields] = useState([
+    "sr",
+    "image",
+    "itemCode",
+    "itemName",
+    "description",
+    "category",
+    "unit",
+    "barcode",
+  ]);
+
+  const handleCustomizeOpen = (open) => {
+    setIsCustomizeOpen(open);
+    if (open) {
+      setTempVisibleFields([...visibleFields]); // copy current visible fields
+    }
+  };
+
+  const handleApplyChanges = () => {
+    setVisibleFields(tempVisibleFields);
+    setIsCustomizeOpen(false);
+    toast.success("Display settings updated!");
+  };
+
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -280,9 +311,25 @@ const ProductInfo = () => {
                 <Package className="w-5 h-5 text-primary" />
                 Product Catalog
               </CardTitle>
-              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                {filteredProducts.length} products
-              </Badge>
+              <div className="flex items-center justify-end gap-3">
+                <Badge
+                  variant="secondary"
+                  className="bg-primary/10 text-primary border-primary/20"
+                >
+                  {filteredProducts.length} products
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsCustomizeOpen(true);
+                  }}
+                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl text-white transition-all duration-200"
+                >
+                  Customize
+                </Button>
+              </div>
+
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -290,35 +337,34 @@ const ProductInfo = () => {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                      Sr
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                      Image
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                      Item Code
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                      Item Name
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                      Unit
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                      Barcode
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    {visibleFields.includes("sr") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Sr</th>
+                    )}
+                    {visibleFields.includes("image") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Image</th>
+                    )}
+                    {visibleFields.includes("itemCode") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Item Code</th>
+                    )}
+                    {visibleFields.includes("itemName") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Item Name</th>
+                    )}
+                    {visibleFields.includes("description") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Description</th>
+                    )}
+                    {visibleFields.includes("category") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Category</th>
+                    )}
+                    {visibleFields.includes("unit") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Unit</th>
+                    )}
+                    {visibleFields.includes("barcode") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Barcode</th>
+                    )}
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
+
                 <tbody className="divide-y divide-border/30">
                   {filteredProducts.map((item, index) => (
                     <tr
@@ -326,62 +372,87 @@ const ProductInfo = () => {
                       className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
-                      <td className="px-6 py-4 font-semibold">{index + 1}</td>
-                      <td className="px-6 py-4">
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.itemName}
-                            className="w-12 h-12 object-cover rounded-xl border-2 border-primary/20 group-hover:border-primary/40 transition-all duration-300 shadow-sm"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-gradient-to-br from-muted to-muted/70 border-2 border-dashed border-muted-foreground/30 rounded-xl flex items-center justify-center group-hover:border-primary/30 transition-all duration-300">
-                            <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                      {visibleFields.includes("sr") && (
+                        <td className="px-6 py-4 font-semibold">{index + 1}</td>
+                      )}
+
+                      {visibleFields.includes("image") && (
+                        <td className="px-6 py-4">
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.itemName}
+                              className="w-12 h-12 object-cover rounded-xl border-2 border-primary/20 group-hover:border-primary/40 transition-all duration-300 shadow-sm"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-gradient-to-br from-muted to-muted/70 border-2 border-dashed border-muted-foreground/30 rounded-xl flex items-center justify-center group-hover:border-primary/30 transition-all duration-300">
+                              <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                          )}
+                        </td>
+                      )}
+
+                      {visibleFields.includes("itemCode") && (
+                        <td className="px-6 py-4">
+                          <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
+                            {item.itemCode}
                           </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
-                          {item.itemCode}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
-                          {item.itemName}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-muted-foreground line-clamp-2 max-w-xs">
-                          {item.description}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge
-                          variant="outline"
-                          className={`${getCategoryColor(item.category)} border-2 font-medium text-xs px-2 py-1 rounded-full`}
-                        >
-                          {item.category}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium bg-muted/30 text-foreground px-3 py-1 rounded-full text-sm border border-border inline-block">
-                          {item.unit}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {item.barcode ? (
-                          <div className="flex items-center gap-2">
-                            <Barcode className="w-4 h-4 text-green-600" />
-                            <span className="font-mono text-sm text-foreground bg-green-50 px-2 py-1 rounded border border-green-200">
-                              {item.barcode}
+                        </td>
+                      )}
+
+                      {visibleFields.includes("itemName") && (
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
+                            {item.itemName}
+                          </div>
+                        </td>
+                      )}
+
+                      {visibleFields.includes("description") && (
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-muted-foreground line-clamp-2 max-w-xs">
+                            {item.description}
+                          </p>
+                        </td>
+                      )}
+
+                      {visibleFields.includes("category") && (
+                        <td className="px-6 py-4">
+                          <Badge
+                            variant="outline"
+                            className={`${getCategoryColor(item.category)} border-2 font-medium text-xs px-2 py-1 rounded-full`}
+                          >
+                            {item.category}
+                          </Badge>
+                        </td>
+                      )}
+
+                      {visibleFields.includes("unit") && (
+                        <td className="px-6 py-4">
+                          <div className="font-medium bg-muted/30 text-foreground px-3 py-1 rounded-full text-sm border border-border inline-block">
+                            {item.unit}
+                          </div>
+                        </td>
+                      )}
+
+                      {visibleFields.includes("barcode") && (
+                        <td className="px-6 py-4">
+                          {item.barcode ? (
+                            <div className="flex items-center gap-2">
+                              <Barcode className="w-4 h-4 text-green-600" />
+                              <span className="font-mono text-sm text-foreground bg-green-50 px-2 py-1 rounded border border-green-200">
+                                {item.barcode}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground italic text-sm bg-muted/30 px-3 py-1 rounded-full border border-dashed border-muted-foreground/30">
+                              No barcode
                             </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground italic text-sm bg-muted/30 px-3 py-1 rounded-full border border-dashed border-muted-foreground/30">
-                            No barcode
-                          </span>
-                        )}
-                      </td>
+                          )}
+                        </td>
+                      )}
+
+                      {/* Actions always visible */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <Button
@@ -408,18 +479,12 @@ const ProductInfo = () => {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
-                          {/* <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-muted transition-all duration-200"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button> */}
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
+
               </table>
 
               {filteredProducts.length === 0 && (
@@ -435,6 +500,78 @@ const ProductInfo = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isCustomizeOpen} onOpenChange={handleCustomizeOpen}>
+        <DialogContent className="max-w-md bg-gradient-to-b from-white/95 to-white/80 dark:from-gray-900/95 dark:to-gray-900/80 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl transition-all duration-500 ease-in-out">
+          <DialogHeader className="pb-3 border-b border-border/30">
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+                ⚙️
+              </span>
+              Customize Display
+            </DialogTitle>
+            <p className="text-sm text-gray-500 dark:text-gray-400 pl-10">
+              Choose which columns to display in your product table.
+            </p>
+          </DialogHeader>
+
+          {fieldLimitAlert && (
+            <div className="mb-4 p-3 rounded bg-red-100 border border-red-400 text-red-700 font-medium text-center animate-fadeIn">
+              You can select a maximum of 6 fields only!
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 py-6 px-1">
+            {[
+              { key: "sr", label: "Sr" },
+              { key: "image", label: "Image" },
+              { key: "itemCode", label: "Item Code" },
+              { key: "itemName", label: "Item Name" },
+              { key: "description", label: "Description" },
+              { key: "category", label: "Category" },
+              { key: "unit", label: "Unit" },
+              { key: "barcode", label: "Barcode" },
+            ].map(({ key, label }) => (
+              <label
+                key={key}
+                className="group flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 border border-transparent hover:border-primary/30 hover:bg-primary/5"
+              >
+                <input
+                  type="checkbox"
+                  checked={tempVisibleFields.includes(key)}
+                  onChange={() => {
+                    setTempVisibleFields((prev) => {
+                      if (prev.includes(key)) {
+                        return prev.filter((f) => f !== key);
+                      } else if (prev.length >= 6) {
+                        setFieldLimitAlert(true);
+                        setTimeout(() => setFieldLimitAlert(false), 2500);
+                        return prev;
+                      } else {
+                        return [...prev, key];
+                      }
+                    });
+                  }}
+                  className="peer appearance-none w-5 h-5 border border-gray-300 dark:border-gray-700 rounded-md checked:bg-gradient-to-br checked:from-primary checked:to-primary/70 transition-all duration-200 flex items-center justify-center relative
+            after:content-['✓'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">
+                  {label}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          <Button
+            className="w-full mt-2 py-3 bg-gradient-to-r from-primary via-primary/80 to-primary/70 text-white font-semibold rounded-xl shadow-lg hover:shadow-primary/40 hover:-translate-y-[1px] transition-all duration-300"
+            onClick={handleApplyChanges}
+          >
+            ✨ Apply Changes
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+
     </DashboardLayout>
   );
 };
