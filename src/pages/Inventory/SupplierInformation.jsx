@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,46 +32,49 @@ import {
   Calendar,
   CreditCard,
   DollarSign,
+  Loader,
 } from "lucide-react";
 import { toast } from "sonner";
-
-const mockSupplierData = [
-  {
-    id: 1,
-    supplierName: "ABC Traders",
-    company: "ABC Distributors Ltd.",
-    address: "Plot 22, Industrial Area, Lahore",
-    vatNumber: "PK-123456789",
-    lastPurchase: "2025-10-22 — €90 excl. VAT",
-    avgPurchasePrice: "€85",
-    totalPurchasedQty: 420,
-    totalSpendings: "€37,800",
-    numberOfOrders: 28,
-    email: "info@abctraders.com",
-    phone: "+92-321-4567890",
-    orders: 28,
-  },
-  {
-    id: 2,
-    supplierName: "Mega Supply Co.",
-    company: "Mega Supply Pvt Ltd.",
-    address: "Main Boulevard, Johar Town, Lahore",
-    vatNumber: "PK-987654321",
-    lastPurchase: "2025-09-10 — €120 excl. VAT",
-    avgPurchasePrice: "€110",
-    totalPurchasedQty: 280,
-    totalSpendings: "€30,500",
-    numberOfOrders: 19,
-    email: "support@megasupply.com",
-    phone: "+92-333-1122334",
-    orders: 19,
-  },
-];
+import { useAuth } from "../../context/AuthContext";
+import api from "../../Api/AxiosInstance";
+import SupplierViewModal from "./Models/SupplierViewModal";
+import Pagination from "../../components/Pagination";
 
 const SupplierInformation = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editSupplierId, setEditSupplierId] = useState(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [supplierData, setSupplierData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    supplierName: "",
+    company: "",
+    address: "",
+    vatNumber: "",
+    email: "",
+    phone: "",
+    lastPurchaseDate: "",
+    lastPurchasePrice: "",
+    avgPurchasePrice: "",
+    totalPurchasedQty: "",
+    totalSpendings: "",
+    numberOfOrders: "",
+  });
 
+  const [summary, setSummary] = useState({
+    totalSuppliers: 0,
+    totalSpendings: 0,
+    averagePurchasePrice: 0,
+    totalOrders: 0,
+  });
+
+  const { token } = useAuth();
   // --- state setup ---
   const [visibleFields, setVisibleFields] = useState([
     "sr",
@@ -97,6 +100,25 @@ const SupplierInformation = () => {
     }
   };
 
+  const handleAddClick = () => {
+    setForm({
+      supplierName: "",
+      company: "",
+      address: "",
+      vatNumber: "",
+      email: "",
+      phone: "",
+      lastPurchaseDate: "",
+      lastPurchasePrice: "",
+      avgPurchasePrice: "",
+      totalPurchasedQty: "",
+      totalSpendings: "",
+      numberOfOrders: "",
+    });
+    setIsEditMode(false);
+    setEditSupplierId(null);
+  };
+
   // apply changes
   const handleApplyChanges = () => {
     setVisibleFields(tempVisibleFields);
@@ -104,20 +126,194 @@ const SupplierInformation = () => {
     toast.success("Display settings updated!");
   };
 
-  const filteredSuppliers = mockSupplierData.filter(
+  // ✅ Fetch suppliers
+  const fetchSuppliers = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/suppliers", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.data.success) {
+        setSupplierData(res.data.data || []);
+        if (res.data.summary) setSummary(res.data.summary);
+      } else {
+        toast.error("Failed to fetch suppliers");
+      }
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+      toast.error("Error fetching supplier data");
+    } finally {
+      setTimeout(() => setLoading(false), 800);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  // console.log(supplierData);
+
+  const filteredSuppliers = supplierData.filter(
     (s) =>
-      s.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.company.toLowerCase().includes(searchTerm.toLowerCase())
+      s.supplierName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.company?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  // pagination
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentSuppliers = filteredSuppliers.slice(startIndex, endIndex);
 
   const handleDownload = () => toast.success("Supplier report downloaded!");
-  const handleSaveSupplier = () => {
-    toast.success("Supplier details saved successfully!");
-    setIsAddOpen(false);
+  const handleSaveSupplier = async () => {
+    try {
+      setSaving(true);
+
+      if (!form.supplierName || !form.company || !form.address) {
+        toast.error("Please fill all required fields!");
+        return;
+      }
+      if (!/\S+@\S+\.\S+/.test(form.email)) {
+        toast.error("Please enter a valid email address!");
+        return;
+      }
+
+      const payload = {
+        supplierName: form.supplierName,
+        company: form.company,
+        address: form.address,
+        vatNumber: form.vatNumber,
+        email: form.email,
+        phone: form.phone,
+        lastPurchase: {
+          date: form.lastPurchaseDate || new Date().toISOString().split("T")[0],
+          price: Number(form.lastPurchasePrice) || 0,
+        },
+
+        avgPurchasePrice: Number(form.avgPurchasePrice) || 0,
+        totalPurchasedQty: Number(form.totalPurchasedQty) || 0,
+        totalSpendings: Number(form.totalSpendings) || 0,
+        numberOfOrders: Number(form.numberOfOrders) || 0,
+      };
+      //  console.log(payload);
+
+      let res;
+
+      if (isEditMode && editSupplierId) {
+        res = await api.put(`/suppliers/${editSupplierId}`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        res = await api.post("/suppliers", payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
+      if (res.data.success) {
+        toast.success("Supplier added successfully!");
+        fetchSuppliers();
+        setIsAddOpen(false);
+        setForm({
+          supplierName: "",
+          company: "",
+          address: "",
+          vatNumber: "",
+          email: "",
+          phone: "",
+          lastPurchaseDate: "",
+          lastPurchasePrice: "",
+          avgPurchasePrice: "",
+          totalPurchasedQty: "",
+          totalSpendings: "",
+          numberOfOrders: "",
+        });
+        setIsEditMode(false);
+        setEditSupplierId(null);
+      } else {
+        toast.error(res.data.message || "Failed to add supplier");
+      }
+    } catch (error) {
+      console.error("Error adding supplier:", error);
+      toast.error(
+        error.response?.data?.message || "Server error while adding supplier"
+      );
+    } finally {
+      setSaving(false);
+    }
   };
-  const handleEdit = (id) => toast.success(`Editing supplier #${id}`);
-  const handleDelete = (id) => toast.error(`Deleting supplier #${id}`);
-  const handleView = (id) => toast.info(`Viewing supplier #${id}`);
+
+  const handleEdit = (id) => {
+    const supplier = supplierData.find((s) => s._id === id);
+    if (!supplier) {
+      toast.error("Supplier not found!");
+      return;
+    }
+
+    // 🧩 Clean up ISO date format for input fields
+    const formattedDate = supplier.lastPurchase?.date
+      ? new Date(supplier.lastPurchase.date).toISOString().split("T")[0]
+      : "";
+
+    setForm({
+      supplierName: supplier.supplierName || "",
+      company: supplier.company || "",
+      address: supplier.address || "",
+      vatNumber: supplier.vatNumber || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      lastPurchaseDate: formattedDate, // ✅ fixed here
+      lastPurchasePrice: supplier.lastPurchase?.price || "",
+      avgPurchasePrice: supplier.avgPurchasePrice || "",
+      totalPurchasedQty: supplier.totalPurchasedQty || "",
+      totalSpendings: supplier.totalSpendings || "",
+      numberOfOrders: supplier.numberOfOrders || "",
+    });
+
+    setEditSupplierId(id);
+    setIsEditMode(true);
+    setIsAddOpen(true);
+  };
+
+  const handleDelete = async (Id) => {
+    // console.log(ItemId);
+
+    try {
+      setLoading(true);
+      toast.loading("Deleting supplier...");
+      const res = await api.delete(`/suppliers/${Id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast.dismiss(); // remove loader
+
+      if (res.data?.success) {
+        toast.success("supplier deleted successfully!");
+        fetchSuppliers(); // refresh table
+      } else {
+        toast.error(res.data?.message || "Failed to delete supplier");
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error deleting supplier:", error);
+      toast.error(
+        error.response?.data?.message || "Server error while deleting"
+      );
+    } finally {
+      setTimeout(() => setLoading(false), 500);
+    }
+  };
+  const handleView = (id) => {
+    const supplier = supplierData.find((s) => s._id === id);
+    if (!supplier) return toast.error("Supplier not found!");
+    setSelectedSupplier(supplier);
+    setIsViewOpen(true);
+  };
+
+  const preventNonNumeric = (e) => {
+    if (["e", "E", "+", "-", ","].includes(e.key)) e.preventDefault();
+  };
 
   return (
     <DashboardLayout>
@@ -144,16 +340,21 @@ const SupplierInformation = () => {
             </Button>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
+                <Button
+                  onClick={handleAddClick}
+                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200"
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Supplier
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
+              <DialogContent className="max-w-2xl max-h-full overflow-y-scroll bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
                     <Plus className="w-5 h-5 text-primary" />
-                    Add Supplier Information
+                    {isEditMode
+                      ? "Edit Supplier Information"
+                      : "Add Supplier Information"}
                   </DialogTitle>
                 </DialogHeader>
 
@@ -161,60 +362,164 @@ const SupplierInformation = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Supplier Name</Label>
-                      <Input placeholder="Enter supplier name" />
+                      <Input
+                        placeholder="Enter supplier name"
+                        value={form.supplierName}
+                        onChange={(e) =>
+                          setForm({ ...form, supplierName: e.target.value })
+                        }
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Company</Label>
-                      <Input placeholder="Enter company name" />
+                      <Input
+                        value={form.company}
+                        onChange={(e) =>
+                          setForm({ ...form, company: e.target.value })
+                        }
+                        placeholder="Enter company name"
+                      />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label>Address</Label>
-                    <Input placeholder="Enter supplier address" />
+                    <Input
+                      value={form.address}
+                      onChange={(e) =>
+                        setForm({ ...form, address: e.target.value })
+                      }
+                      placeholder="Enter supplier address"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>VAT Number</Label>
-                      <Input placeholder="Enter VAT / Tax ID" />
+                      <Input
+                        type="number"
+                        onKeyDown={preventNonNumeric}
+                        value={form.vatNumber}
+                        onChange={(e) =>
+                          setForm({ ...form, vatNumber: e.target.value })
+                        }
+                        placeholder="Enter VAT / Tax ID"
+                      />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Last Purchase Date & Price</Label>
-                      <Input placeholder='e.g. "2025-10-22 — €90 excl. VAT"' />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Last Purchase Date</Label>
+                        <Input
+                          type="date"
+                          value={form.lastPurchaseDate}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              lastPurchaseDate: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Last Purchase Price (€)</Label>
+                        <Input
+                          type="number"
+                          onKeyDown={preventNonNumeric}
+                          placeholder="0.00"
+                          value={form.lastPurchasePrice}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              lastPurchasePrice: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Average Purchase Price</Label>
-                      <Input placeholder="Enter average price" />
+                      <Input
+                        type="number"
+                        onKeyDown={preventNonNumeric}
+                        value={form.avgPurchasePrice}
+                        onChange={(e) =>
+                          setForm({ ...form, avgPurchasePrice: e.target.value })
+                        }
+                        placeholder="Enter average price"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Total Purchased Quantity</Label>
-                      <Input placeholder="Enter total quantity" />
+                      <Input
+                        type="number"
+                        onKeyDown={preventNonNumeric}
+                        value={form.totalPurchasedQty}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            totalPurchasedQty: e.target.value,
+                          })
+                        }
+                        placeholder="Enter total quantity"
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Total Spendings</Label>
-                      <Input placeholder="Enter total spendings" />
+                      <Input
+                        type="number"
+                        onKeyDown={preventNonNumeric}
+                        value={form.totalSpendings}
+                        onChange={(e) =>
+                          setForm({ ...form, totalSpendings: e.target.value })
+                        }
+                        placeholder="Enter total spendings"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Number of Orders</Label>
-                      <Input placeholder="Enter order count" />
+                      <Input
+                        type="number"
+                        onKeyDown={preventNonNumeric}
+                        value={form.numberOfOrders}
+                        onChange={(e) =>
+                          setForm({ ...form, numberOfOrders: e.target.value })
+                        }
+                        placeholder="Enter order count"
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Email</Label>
-                      <Input placeholder="Enter email address" />
+                      <Input
+                        type="email"
+                        required
+                        pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                        value={form.email}
+                        onChange={(e) =>
+                          setForm({ ...form, email: e.target.value })
+                        }
+                        placeholder="Enter email address"
+                      />
                     </div>
+
                     <div className="space-y-2">
                       <Label>Mobile / Phone No</Label>
-                      <Input placeholder="Enter contact number" />
+                      <Input
+                        value={form.phone}
+                        onChange={(e) =>
+                          setForm({ ...form, phone: e.target.value })
+                        }
+                        placeholder="Enter contact number"
+                      />
                     </div>
                   </div>
 
@@ -222,7 +527,16 @@ const SupplierInformation = () => {
                     className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium"
                     onClick={handleSaveSupplier}
                   >
-                    Save Supplier Details
+                    {saving ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        {isEditMode ? "Updating..." : "Saving..."}
+                      </div>
+                    ) : isEditMode ? (
+                      "Update Supplier"
+                    ) : (
+                      " Save Supplier Details"
+                    )}
                   </Button>
                 </div>
               </DialogContent>
@@ -239,7 +553,7 @@ const SupplierInformation = () => {
                   Total Suppliers
                 </p>
                 <p className="text-2xl font-bold text-blue-900">
-                  {mockSupplierData.length}
+                  {summary.totalSuppliers || 0}
                 </p>
               </div>
               <Building2 className="w-5 h-5 text-blue-600" />
@@ -252,15 +566,7 @@ const SupplierInformation = () => {
                   Total Spendings
                 </p>
                 <p className="text-2xl font-bold text-green-900">
-                  €
-                  {mockSupplierData
-                    .reduce(
-                      (sum, s) =>
-                        sum +
-                        parseFloat(s.totalSpendings.replace(/[^\d.]/g, "")),
-                      0
-                    )
-                    .toLocaleString()}
+                  € {summary.totalSpendings.toLocaleString() || 0}
                 </p>
               </div>
               <DollarSign className="w-5 h-5 text-green-600" />
@@ -272,7 +578,10 @@ const SupplierInformation = () => {
                 <p className="text-sm font-medium text-amber-700">
                   Average Purchase Price
                 </p>
-                <p className="text-2xl font-bold text-amber-900">€98</p>
+                <p className="text-2xl font-bold text-amber-900">
+                  {" "}
+                  € {summary.averagePurchasePrice || 0}
+                </p>
               </div>
               <CreditCard className="w-5 h-5 text-amber-600" />
             </CardContent>
@@ -284,10 +593,7 @@ const SupplierInformation = () => {
                   Total Orders
                 </p>
                 <p className="text-2xl font-bold text-purple-900">
-                  {mockSupplierData.reduce(
-                    (sum, s) => sum + s.numberOfOrders,
-                    0
-                  )}
+                  {summary.totalOrders || 0}
                 </p>
               </div>
               <Package className="w-5 h-5 text-purple-600" />
@@ -305,7 +611,10 @@ const SupplierInformation = () => {
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50
                           bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); 
+                }}
               />
             </div>
           </CardContent>
@@ -389,101 +698,121 @@ const SupplierInformation = () => {
                 </tr>
               </thead>
 
-
               <tbody className="divide-y divide-border/30">
-                {filteredSuppliers.map((s, index) => (
-                  <tr
-                    key={s.id}
-                    className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
-                  >
-                    {visibleFields.includes("sr") && (
-                      <td className="px-6 py-4 font-semibold whitespace-nowrap overflow-hidden text-ellipsis">
-                        {index + 1}
-                      </td>
-                    )}
-
-                    {visibleFields.includes("supplierName") && (
-                      <td className="px-6 py-4 font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
-                        {s.supplierName}
-                      </td>
-                    )}
-                    {visibleFields.includes("company") && (
-                      <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                        {s.company}
-                      </td>
-                    )}
-                    {visibleFields.includes("address") && (
-                      <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
-                        {s.address}
-                      </td>
-                    )}
-                    {visibleFields.includes("vatNumber") && (
-                      <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
-                        {s.vatNumber}
-                      </td>
-                    )}
-                    {visibleFields.includes("avgPurchasePrice") && (
-                      <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
-                        {s.avgPurchasePrice}
-                      </td>
-                    )}
-                    {visibleFields.includes("totalSpendings") && (
-                      <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                        {s.totalSpendings}
-                      </td>
-                    )}
-
-                    {visibleFields.includes("orders") && (
-                      <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                        {s.orders}
-                      </td>
-                    )}
-                    <td className="px-6 py-4 flex items-center gap-1 whitespace-nowrap">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleView(s.id)}
-                        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(s.id)}
-                        className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
-                        title="Edit"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(s.id)}
-                        className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={visibleFields.length + 1}
+                      className="py-20 text-center"
+                    >
+                      <div className="flex flex-col items-center justify-center">
+                        <Loader className="w-10 h-10 text-primary animate-spin mb-3" />
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : filteredSuppliers.length > 0 ? (
+                  currentSuppliers.map((s, index) => (
+                    <tr
+                      key={s._id || index}
+                      className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
+                    >
+                      {visibleFields.includes("sr") && (
+                        <td className="px-6 py-4 font-semibold whitespace-nowrap overflow-hidden text-ellipsis">
+                          {startIndex + index + 1}
+                        </td>
+                      )}
+
+                      {visibleFields.includes("supplierName") && (
+                        <td className="px-6 py-4 font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
+                          {s.supplierName || "-"}
+                        </td>
+                      )}
+                      {visibleFields.includes("company") && (
+                        <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
+                          {s.company || "-"}
+                        </td>
+                      )}
+                      {visibleFields.includes("address") && (
+                        <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                          {s.address || "-"}
+                        </td>
+                      )}
+                      {visibleFields.includes("vatNumber") && (
+                        <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
+                          {s.vatNumber || "-"}
+                        </td>
+                      )}
+                      {visibleFields.includes("avgPurchasePrice") && (
+                        <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
+                          €{s.avgPurchasePrice || 0}
+                        </td>
+                      )}
+                      {visibleFields.includes("totalSpendings") && (
+                        <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
+                          €{s.totalSpendings || 0}
+                        </td>
+                      )}
+                      {visibleFields.includes("orders") && (
+                        <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
+                          {s.numberOfOrders || 0}
+                        </td>
+                      )}
+                      <td className="px-6 py-4 flex items-center gap-1 whitespace-nowrap">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleView(s._id)}
+                          className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(s._id)}
+                          className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(s._id)}
+                          className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={visibleFields.length + 1}
+                      className="text-center py-12"
+                    >
+                      <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                      <p className="text-muted-foreground font-medium text-lg">
+                        No suppliers found
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Try adjusting your search terms or add a new supplier
+                        entry
+                      </p>
+                    </td>
+                  </tr>
+                )}
               </tbody>
-
             </table>
-
-            {filteredSuppliers.length === 0 && (
-              <div className="text-center py-12">
-                <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground font-medium text-lg">
-                  No suppliers found
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Try adjusting your search terms or add a new supplier entry
-                </p>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredSuppliers.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
           </CardContent>
         </Card>
       </div>
@@ -542,8 +871,6 @@ const SupplierInformation = () => {
                       }
                     });
                   }}
-
-
                   className="peer appearance-none w-5 h-5 border border-gray-300 dark:border-gray-700 rounded-md checked:bg-gradient-to-br checked:from-primary checked:to-primary/70 transition-all duration-200 flex items-center justify-center relative
             after:content-['✓'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
                 />
@@ -563,9 +890,12 @@ const SupplierInformation = () => {
           </Button>
         </DialogContent>
       </Dialog>
-
-
-
+      {/* view model */}
+      <SupplierViewModal
+        isOpen={isViewOpen}
+        onClose={setIsViewOpen}
+        supplier={selectedSupplier}
+      />
     </DashboardLayout>
   );
 };

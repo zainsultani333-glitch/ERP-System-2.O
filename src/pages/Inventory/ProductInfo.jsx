@@ -56,7 +56,7 @@ const ProductInfo = () => {
   const [products, setProducts] = useState([]);
   const { token } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 8;
 
   // Fetch product table list
   const fetchProducts = async () => {
@@ -453,7 +453,6 @@ const ProductInfo = () => {
                         <Select
                           value={selectedCategory}
                           onValueChange={setSelectedCategory}
-                         
                         >
                           <SelectTrigger className="bg-muted/50 border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
                             <SelectValue placeholder="Select Category" />
@@ -591,7 +590,10 @@ const ProductInfo = () => {
                 placeholder="Search by item code or name..."
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50 bg-background/80 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-300 text-foreground"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // ✅ Reset page to first when searching
+                }}
               />
             </div>
           </CardContent>
@@ -718,7 +720,7 @@ const ProductInfo = () => {
                         {visibleFields.includes("itemCode") && (
                           <td className="px-6 py-4">
                             <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
-                              {item.itemCode}
+                              {item.itemCode || "-"}
                             </div>
                           </td>
                         )}
@@ -726,7 +728,7 @@ const ProductInfo = () => {
                         {visibleFields.includes("itemName") && (
                           <td className="px-6 py-4">
                             <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
-                              {item.itemName}
+                              {item.itemName || "-"}
                             </div>
                           </td>
                         )}
@@ -734,7 +736,7 @@ const ProductInfo = () => {
                         {visibleFields.includes("description") && (
                           <td className="px-6 py-4">
                             <p className="text-sm text-muted-foreground line-clamp-2 max-w-xs">
-                              {item.description}
+                              {item.description || "-"}
                             </p>
                           </td>
                         )}
@@ -747,7 +749,7 @@ const ProductInfo = () => {
                                 item.category
                               )} border-2 font-medium text-xs px-2 py-1 rounded-full`}
                             >
-                              {item.category}
+                              {item.category || "-"}
                             </Badge>
                           </td>
                         )}
@@ -755,7 +757,7 @@ const ProductInfo = () => {
                         {visibleFields.includes("unit") && (
                           <td className="px-6 py-4">
                             <div className="font-medium bg-muted/30 text-foreground px-3 py-1 rounded-full text-sm border border-border inline-block">
-                              {item.unit}
+                              {item.unit || "-"}
                             </div>
                           </td>
                         )}
@@ -766,7 +768,7 @@ const ProductInfo = () => {
                               <div className="flex items-center gap-2">
                                 <Barcode className="w-4 h-4 text-green-600" />
                                 <span className="font-mono text-sm text-foreground bg-green-50 px-2 py-1 rounded border border-green-200">
-                                  {item.barcode}
+                                  {item.barcode || "-"}
                                 </span>
                               </div>
                             ) : (

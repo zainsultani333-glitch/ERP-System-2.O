@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,63 +23,104 @@ import {
   Trash2,
   Eye,
   RefreshCw,
+  Loader,
 } from "lucide-react";
 import { toast } from "sonner";
-
-const mockTransactionData = [
-  {
-    id: 1,
-    totalPurchasedQty: 200,
-    totalSoldQty: 150,
-    currentStockBalance: 50,
-    lastSaleDate: "2025-11-05",
-    lastPurchaseDate: "2025-10-28",
-  },
-  {
-    id: 2,
-    totalPurchasedQty: 300,
-    totalSoldQty: 260,
-    currentStockBalance: 40,
-    lastSaleDate: "2025-11-06",
-    lastPurchaseDate: "2025-10-20",
-  },
-  {
-    id: 3,
-    totalPurchasedQty: 500,
-    totalSoldQty: 480,
-    currentStockBalance: 20,
-    lastSaleDate: "2025-11-07",
-    lastPurchaseDate: "2025-10-25",
-  },
-];
+import { useAuth } from "../../context/AuthContext";
+import api from "../../Api/AxiosInstance";
+import Pagination from "../../components/Pagination";
+import TransactionViewModal from "./Models/TransactionViewModal";
 
 const TransactionTracking = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [transactionData, setTransactionData] = useState([]);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
-  const filteredData = mockTransactionData.filter((item) =>
-    item.totalPurchasedQty.toString().includes(searchTerm)
-  );
+  const [summary, setSummary] = useState({
+    totalProducts: 0,
+    totalPurchasedQty: 0,
+    totalSoldQty: 0,
+    totalBalance: 0,
+  });
+  const [loading, setLoading] = useState(false);
 
-  const handleDownload = () => toast.success("Transaction tracking report downloaded!");
+  const { token } = useAuth();
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get("/inventory/transactions", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.data.success) {
+          setTransactionData(res.data.data || []);
+          setSummary(res.data.summary || {});
+        } else {
+          toast.error("Failed to fetch transactions");
+        }
+      } catch (err) {
+        console.error("Error fetching transactions:", err);
+        toast.error("Error fetching transactions");
+      } finally {
+        setTimeout(() => setLoading(false), 500);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+  // console.log({ transactionData });
+  // search
+  const filteredData = transactionData.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      item.itemName?.toLowerCase().includes(term) ||
+      item.itemCode?.toLowerCase().includes(term) ||
+      item.category?.toLowerCase().includes(term) ||
+      item.totalPurchasedQty?.toString().includes(term)
+    );
+  });
+
+  // pagination
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentTransactions = filteredData.slice(startIndex, endIndex);
+
+  const handleDownload = () =>
+    toast.success("Transaction tracking report downloaded!");
   const handleSave = () => {
     toast.success("Transaction details saved successfully!");
     setIsAddOpen(false);
   };
   const handleEdit = (id) => toast.success(`Editing record #${id}`);
   const handleDelete = (id) => toast.error(`Deleting record #${id}`);
-  const handleView = (id) => toast.info(`Viewing transaction details for #${id}`);
+  const handleView = (itemCode) => {
+    const transaction = transactionData.find((t) => t.itemCode === itemCode);
+    if (!transaction) return toast.error("Transaction not found!");
+    setSelectedTransaction(transaction);
+    setIsViewOpen(true);
+  };
+
   const handleRefresh = (id) => toast.success(`Refreshing data for #${id}`);
 
   // ✅ Fields visibility state
-const [visibleFields, setVisibleFields] = useState([
-  "sr",
-  "totalPurchasedQty",
-  "totalSoldQty",
-  "currentStockBalance",
-  "lastSaleDate",
-  "lastPurchaseDate",
-]);
+  const [visibleFields, setVisibleFields] = useState([
+    "sr",
+    "itemName",
+    "itemCode",
+    "category",
+    "totalPurchasedQty",
+    "totalSoldQty",
+    "currentStockBalance",
+    "lastSaleDate",
+    "lastPurchaseDate",
+  ]);
+
   const [tempVisibleFields, setTempVisibleFields] = useState([]);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
@@ -109,7 +150,6 @@ const [visibleFields, setVisibleFields] = useState([
               Auto-updated from sales and purchase transactions
             </p>
           </div>
-
         </div>
 
         {/* Stats Cards */}
@@ -118,9 +158,11 @@ const [visibleFields, setVisibleFields] = useState([
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Total Products</p>
+                  <p className="text-sm font-medium text-blue-700">
+                    Total Products
+                  </p>
                   <p className="text-2xl font-bold text-blue-900">
-                    {mockTransactionData.length}
+                    {summary.totalProducts || 0}
                   </p>
                 </div>
                 <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -134,9 +176,11 @@ const [visibleFields, setVisibleFields] = useState([
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Total Purchased Qty</p>
+                  <p className="text-sm font-medium text-green-700">
+                    Total Purchased Qty
+                  </p>
                   <p className="text-2xl font-bold text-green-900">
-                    {mockTransactionData.reduce((sum, item) => sum + item.totalPurchasedQty, 0)}
+                    {summary.totalPurchasedQty || 0}
                   </p>
                 </div>
                 <div className="p-2 bg-green-500/10 rounded-lg">
@@ -150,9 +194,13 @@ const [visibleFields, setVisibleFields] = useState([
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-700">Total Sold Qty</p>
+                  <p className="text-sm font-medium text-purple-700">
+                    Total Sold Qty
+                  </p>
                   <p className="text-2xl font-bold text-purple-900">
-                    {mockTransactionData.reduce((sum, item) => sum + item.totalSoldQty, 0)}
+                    <p className="text-2xl font-bold text-purple-900">
+                      {summary.totalSoldQty || 0}
+                    </p>
                   </p>
                 </div>
                 <div className="p-2 bg-purple-500/10 rounded-lg">
@@ -169,11 +217,14 @@ const [visibleFields, setVisibleFields] = useState([
             <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 z-10" />
               <Input
-                placeholder="Search by totalPurchasedQty..."
+                placeholder="Search by item name, code, category, or purchased qty..."
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50
                    bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // ✅ reset pagination
+                }}
               />
             </div>
           </CardContent>
@@ -219,6 +270,21 @@ const [visibleFields, setVisibleFields] = useState([
                         Sr
                       </th>
                     )}
+                    {visibleFields.includes("itemName") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Item Name
+                      </th>
+                    )}
+                    {visibleFields.includes("itemCode") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Item Code
+                      </th>
+                    )}
+                    {visibleFields.includes("category") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Category
+                      </th>
+                    )}
                     {visibleFields.includes("totalPurchasedQty") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                         Total Purchased Qty
@@ -251,61 +317,106 @@ const [visibleFields, setVisibleFields] = useState([
                 </thead>
 
                 <tbody className="divide-y divide-border/30">
-                  {filteredData.map((item, index) => (
-                    <tr
-                      key={item.id}
-                      className="group hover:bg-primary/5 transition-all duration-300"
-                    >
-                      {visibleFields.includes("sr") && <td className="px-6 py-4">{index + 1}</td>}
-                      {visibleFields.includes("totalPurchasedQty") && (
-                        <td className="px-6 py-4">{item.totalPurchasedQty}</td>
-                      )}
-                      {visibleFields.includes("totalSoldQty") && (
-                        <td className="px-6 py-4 text-green-700 font-semibold">
-                          {item.totalSoldQty}
-                        </td>
-                      )}
-                      {visibleFields.includes("currentStockBalance") && (
-                        <td className="px-6 py-4 font-bold text-blue-700">
-                          {item.currentStockBalance}
-                        </td>
-                      )}
-                      {visibleFields.includes("lastSaleDate") && (
-                        <td className="px-6 py-4 text-sm">{item.lastSaleDate}</td>
-                      )}
-                      {visibleFields.includes("lastPurchaseDate") && (
-                        <td className="px-6 py-4 text-sm">{item.lastPurchaseDate}</td>
-                      )}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleView(item.id)}
-                            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 rounded-lg"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan={visibleFields.length + 1}
+                        className="py-20 text-center"
+                      >
+                        <div className="flex flex-col items-center justify-center">
+                          <Loader className="w-10 h-10 text-primary animate-spin mb-3" />
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : currentTransactions.length > 0 ? (
+                    currentTransactions.map((item, index) => (
+                      <tr
+                        key={item.itemCode}
+                        className="group hover:bg-primary/5 transition-all duration-300"
+                      >
+                        {visibleFields.includes("sr") && (
+                          <td className="px-6 py-4">
+                            {startIndex + index + 1}
+                          </td>
+                        )}
+                        {visibleFields.includes("itemName") && (
+                          <td className="px-6 py-4">{item.itemName || "-"}</td>
+                        )}
+                        {visibleFields.includes("itemCode") && (
+                          <td className="px-6 py-4">
+                            <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
+                              {item.itemCode || "-"}
+                            </div>
+                          </td>
+                        )}
+                        {visibleFields.includes("category") && (
+                          <td className="px-6 py-4">{item.category || "-"}</td>
+                        )}
+                        {visibleFields.includes("totalPurchasedQty") && (
+                          <td className="px-6 py-4">
+                            {item.totalPurchasedQty ?? "-"}
+                          </td>
+                        )}
+                        {visibleFields.includes("totalSoldQty") && (
+                          <td className="px-6 py-4 text-green-700 font-semibold">
+                            {item.totalSoldQty ?? "-"}
+                          </td>
+                        )}
+                        {visibleFields.includes("currentStockBalance") && (
+                          <td className="px-6 py-4 font-bold text-blue-700">
+                            {item.currentStockBalance ?? "-"}
+                          </td>
+                        )}
+                        {visibleFields.includes("lastSaleDate") && (
+                          <td className="px-6 py-4 text-sm">
+                            {item.lastSaleDate || "-"}
+                          </td>
+                        )}
+                        {visibleFields.includes("lastPurchaseDate") && (
+                          <td className="px-6 py-4 text-sm">
+                            {item.lastPurchaseDate || "-"}
+                          </td>
+                        )}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleView(item.itemCode)}
+                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 rounded-lg"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={visibleFields.length + 1}
+                        className="text-center py-12"
+                      >
+                        <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                        <p className="text-muted-foreground font-medium text-lg">
+                          No transaction records found
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Try adjusting your search terms or add a new record
+                        </p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
 
-
-              {filteredData.length === 0 && (
-                <div className="text-center py-12">
-                  <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground font-medium text-lg">
-                    No transaction records found
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Try adjusting your search terms or add a new record
-                  </p>
-                </div>
-              )}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredData.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </CardContent>
         </Card>
@@ -315,10 +426,14 @@ const [visibleFields, setVisibleFields] = useState([
         <DialogContent className="max-w-md bg-gradient-to-b from-white/95 to-white/80 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl">
           <DialogHeader className="pb-3 border-b border-border/30">
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">⚙️</span>
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+                ⚙️
+              </span>
               Customize Display
             </DialogTitle>
-            <p className="text-sm text-gray-500 pl-10">Choose which columns to display in your table.</p>
+            <p className="text-sm text-gray-500 pl-10">
+              Choose which columns to display in your table.
+            </p>
           </DialogHeader>
 
           {fieldLimitAlert && (
@@ -330,19 +445,26 @@ const [visibleFields, setVisibleFields] = useState([
           <div className="grid grid-cols-2 gap-3 py-6 px-1">
             {[
               { key: "sr", label: "Serial Number" },
+              { key: "itemName", label: "Item Name" },
+              { key: "itemCode", label: "Item Code" },
+              { key: "category", label: "Category" },
               { key: "totalPurchasedQty", label: "Total Purchased Qty" },
               { key: "totalSoldQty", label: "Total Sold Qty" },
               { key: "currentStockBalance", label: "Current Stock Balance" },
               { key: "lastSaleDate", label: "Last Sale Date" },
               { key: "lastPurchaseDate", label: "Last Purchase Date" },
             ].map(({ key, label }) => (
-              <label key={key} className="group flex items-center gap-3 p-3 rounded-xl cursor-pointer border border-transparent hover:border-primary/30 hover:bg-primary/5">
+              <label
+                key={key}
+                className="group flex items-center gap-3 p-3 rounded-xl cursor-pointer border border-transparent hover:border-primary/30 hover:bg-primary/5"
+              >
                 <input
                   type="checkbox"
                   checked={tempVisibleFields.includes(key)}
                   onChange={() => {
-                    setTempVisibleFields(prev => {
-                      if (prev.includes(key)) return prev.filter(f => f !== key);
+                    setTempVisibleFields((prev) => {
+                      if (prev.includes(key))
+                        return prev.filter((f) => f !== key);
                       if (prev.length >= 6) {
                         setFieldLimitAlert(true);
                         setTimeout(() => setFieldLimitAlert(false), 2500);
@@ -354,7 +476,9 @@ const [visibleFields, setVisibleFields] = useState([
                   className="peer appearance-none w-5 h-5 border border-gray-300 dark:border-gray-700 rounded-md checked:bg-gradient-to-br checked:from-primary checked:to-primary/70 transition-all duration-200 flex items-center justify-center relative
             after:content-['✓'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
                 />
-                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">{label}</span>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">
+                  {label}
+                </span>
               </label>
             ))}
           </div>
@@ -367,8 +491,12 @@ const [visibleFields, setVisibleFields] = useState([
           </Button>
         </DialogContent>
       </Dialog>
-
-
+      {/* view modal */}
+      <TransactionViewModal
+        isOpen={isViewOpen}
+        onClose={setIsViewOpen}
+        transaction={selectedTransaction}
+      />
     </DashboardLayout>
   );
 };

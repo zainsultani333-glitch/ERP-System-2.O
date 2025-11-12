@@ -63,7 +63,7 @@ const StockPurchaseDetails = () => {
   const [stockData, setStockData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 8;
   const [openingStock, setOpeningStock] = useState("");
   const [purchaseRate, setPurchaseRate] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
@@ -99,53 +99,52 @@ const StockPurchaseDetails = () => {
     fetchStock();
   }, []);
   // fetch item name
-  console.log(stockData, "data");
+  // console.log(stockData, "data");
 
   const fetchItemNames = async () => {
-  try {
-    setItemNameLoading(true);
-    const res = await api.get("/inventory/items/name");
-    if (res.data.success) {
-      setItemNames(res.data.data);
-    } else {
-      toast.error("Failed to fetch item names");
+    try {
+      setItemNameLoading(true);
+      const res = await api.get("/inventory/items/name");
+      if (res.data.success) {
+        setItemNames(res.data.data);
+      } else {
+        toast.error("Failed to fetch item names");
+      }
+    } catch (error) {
+      console.error("Error fetching item names:", error);
+      toast.error("Error fetching item names");
+    } finally {
+      setTimeout(() => setItemNameLoading(false), 500);
     }
-  } catch (error) {
-    console.error("Error fetching item names:", error);
-    toast.error("Error fetching item names");
-  } finally {
-    setTimeout(() => setItemNameLoading(false), 500);
-  }
-};
+  };
 
-const fetchWarehouses = async () => {
-  try {
-    setWarehouseLoading(true);
-    const res = await api.get("/warehouses/name");
-    if (res.data.success) {
-      setWarehouses(res.data.data);
-    } else {
-      toast.error("Failed to fetch warehouses");
+  const fetchWarehouses = async () => {
+    try {
+      setWarehouseLoading(true);
+      const res = await api.get("/warehouses/name");
+      if (res.data.success) {
+        setWarehouses(res.data.data);
+      } else {
+        toast.error("Failed to fetch warehouses");
+      }
+    } catch (error) {
+      console.error("Error fetching warehouses:", error);
+      toast.error("Error fetching warehouses");
+    } finally {
+      setTimeout(() => setWarehouseLoading(false), 500);
     }
-  } catch (error) {
-    console.error("Error fetching warehouses:", error);
-    toast.error("Error fetching warehouses");
-  } finally {
-    setTimeout(() => setWarehouseLoading(false), 500);
-  }
-};
+  };
 
-useEffect(() => {
-  if (isAddOpen) {
-   
-    fetchWarehouses();
-  }
-}, [isAddOpen]);
+  useEffect(() => {
+    if (isAddOpen) {
+      fetchWarehouses();
+    }
+  }, [isAddOpen]);
 
-// item name useeffect call first time
-useEffect(() => {
-  fetchItemNames();
-}, []);
+  // item name useeffect call first time
+  useEffect(() => {
+    fetchItemNames();
+  }, []);
 
   const filteredStock = stockData.filter(
     (item) =>
@@ -354,7 +353,6 @@ useEffect(() => {
     return "healthy";
   };
 
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -379,34 +377,31 @@ useEffect(() => {
               Export Report
             </Button>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              {
-                itemNames.length>0&&(
-                     <DialogTrigger
-                onClick={() => {
-                  // 🧠 Reset edit mode whenever adding new entry
-                  setIsEditMode(false);
-                  setEditStockId(null);
+              {itemNames.length > 0 && (
+                <DialogTrigger
+                  onClick={() => {
+                    // 🧠 Reset edit mode whenever adding new entry
+                    setIsEditMode(false);
+                    setEditStockId(null);
 
-                  // 🧼 Optional — clear input fields
-                  setSelectedItem("");
-                  setSelectedWarehouse("");
-                  setOpeningStock("");
-                  setPurchaseRate("");
-                  setSellingPrice("");
-                  setWholesalePrice("");
-                  setMinStockLevel("");
-                }}
-                asChild
-              >
-                <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Stock Entry
-                </Button>
-              </DialogTrigger>
+                    // 🧼 Optional — clear input fields
+                    setSelectedItem("");
+                    setSelectedWarehouse("");
+                    setOpeningStock("");
+                    setPurchaseRate("");
+                    setSellingPrice("");
+                    setWholesalePrice("");
+                    setMinStockLevel("");
+                  }}
+                  asChild
+                >
+                  <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Stock Entry
+                  </Button>
+                </DialogTrigger>
+              )}
 
-                )
-              }
-           
               <DialogContent className="max-w-2xl max-h-full overflow-y-scroll bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
@@ -681,7 +676,10 @@ useEffect(() => {
                 placeholder="Search by item code or name..."
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50 bg-background/80 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // ✅ Reset page to first when searching
+                }}
               />
             </div>
           </CardContent>
@@ -798,7 +796,7 @@ useEffect(() => {
                         {visibleFields.includes("itemCode") && (
                           <td className="px-6 py-4">
                             <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
-                              {item.itemCode}
+                              {item.itemCode || "-"}
                             </div>
                           </td>
                         )}
@@ -806,7 +804,7 @@ useEffect(() => {
                         {visibleFields.includes("itemName") && (
                           <td className="px-6 py-4">
                             <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
-                              {item.itemName}
+                              {item.itemName || "-"}
                             </div>
                           </td>
                         )}
@@ -829,7 +827,7 @@ useEffect(() => {
                                     : "text-green-600"
                                 }`}
                               >
-                                {item.openingStock}
+                                {item.openingStock || "-"}
                               </span>
                               {getStockStatus(
                                 item.openingStock,
@@ -862,7 +860,9 @@ useEffect(() => {
                           </td>
                         )}
                         {visibleFields.includes("minStock") && (
-                          <td className="px-6 py-4">{item.minStockLevel}</td>
+                          <td className="px-6 py-4">
+                            {item.minStockLevel || "-"}
+                          </td>
                         )}
 
                         {visibleFields.includes("actions") && (
