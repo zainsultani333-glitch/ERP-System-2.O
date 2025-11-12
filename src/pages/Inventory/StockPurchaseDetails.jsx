@@ -38,6 +38,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import api from "../../Api/AxiosInstance";
+import { useAuth } from "../../context/AuthContext";
+import StockViewModal from "./Models/StockViewModal";
+import Pagination from "../../components/Pagination";
 
 const StockPurchaseDetails = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,9 +56,23 @@ const StockPurchaseDetails = () => {
   const [warehouses, setWarehouses] = useState([]);
   const [warehouseLoading, setWarehouseLoading] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editStockId, setEditStockId] = useState(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [stockData, setStockData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [openingStock, setOpeningStock] = useState("");
+  const [purchaseRate, setPurchaseRate] = useState("");
+  const [sellingPrice, setSellingPrice] = useState("");
+  const [wholesalePrice, setWholesalePrice] = useState("");
+  const [minStockLevel, setMinStockLevel] = useState("");
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState(null);
+
+  const { token } = useAuth();
 
   // Fetch stock data
   const fetchStock = async () => {
@@ -82,55 +99,63 @@ const StockPurchaseDetails = () => {
     fetchStock();
   }, []);
   // fetch item name
+  console.log(stockData, "data");
 
-  useEffect(() => {
-    const fetchItemNames = async () => {
-      try {
-        setItemNameLoading(true);
-        const res = await api.get("/inventory/items/name");
-        if (res.data.success) {
-          setItemNames(res.data.data);
-        } else {
-          toast.error("Failed to fetch item names");
-        }
-      } catch (error) {
-        console.error("Error fetching item names:", error);
-        toast.error("Error fetching item names");
-      } finally {
-        setTimeout(() => setItemNameLoading(false), 500);
-      }
-    };
-
-    // fetch ware house api
-    // ✅ Fetch warehouse list
-    const fetchWarehouses = async () => {
-      try {
-        setWarehouseLoading(true);
-        const res = await api.get("/warehouses/name");
-        if (res.data.success) {
-          setWarehouses(res.data.data);
-        } else {
-          toast.error("Failed to fetch warehouses");
-        }
-      } catch (error) {
-        console.error("Error fetching warehouses:", error);
-        toast.error("Error fetching warehouses");
-      } finally {
-        setTimeout(() => setWarehouseLoading(false), 500);
-      }
-    };
-
-    if (isAddOpen) {
-      fetchItemNames();
-      fetchWarehouses();
+  const fetchItemNames = async () => {
+  try {
+    setItemNameLoading(true);
+    const res = await api.get("/inventory/items/name");
+    if (res.data.success) {
+      setItemNames(res.data.data);
+    } else {
+      toast.error("Failed to fetch item names");
     }
-  }, [isAddOpen]);
+  } catch (error) {
+    console.error("Error fetching item names:", error);
+    toast.error("Error fetching item names");
+  } finally {
+    setTimeout(() => setItemNameLoading(false), 500);
+  }
+};
+
+const fetchWarehouses = async () => {
+  try {
+    setWarehouseLoading(true);
+    const res = await api.get("/warehouses/name");
+    if (res.data.success) {
+      setWarehouses(res.data.data);
+    } else {
+      toast.error("Failed to fetch warehouses");
+    }
+  } catch (error) {
+    console.error("Error fetching warehouses:", error);
+    toast.error("Error fetching warehouses");
+  } finally {
+    setTimeout(() => setWarehouseLoading(false), 500);
+  }
+};
+
+useEffect(() => {
+  if (isAddOpen) {
+   
+    fetchWarehouses();
+  }
+}, [isAddOpen]);
+
+// item name useeffect call first time
+useEffect(() => {
+  fetchItemNames();
+}, []);
 
   const filteredStock = stockData.filter(
     (item) =>
       item.itemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.itemCode?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  // --- Calculate paginated data ---
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentStock = filteredStock.slice(startIndex, endIndex);
 
   // ✅ Fields visibility state
   const [visibleFields, setVisibleFields] = useState([
@@ -168,21 +193,155 @@ const StockPurchaseDetails = () => {
     toast.success("Stock & purchase report downloaded!");
   };
 
-  const handleSaveStock = () => {
-    toast.success("Stock details saved successfully!");
-    setIsAddOpen(false);
+  const handleSaveStock = async () => {
+    try {
+      setSaving(true);
+
+      // 🧩 Validation
+      if (
+        !selectedItem ||
+        !selectedWarehouse ||
+        !openingStock ||
+        !purchaseRate ||
+        !sellingPrice ||
+        !wholesalePrice ||
+        !minStockLevel
+      ) {
+        toast.error("All fields are required before saving!");
+        return;
+      }
+
+      let itemId;
+
+      // 🧩 If adding new stock → find item ID
+      if (!isEditMode) {
+        const item = itemNames.find((i) => i.itemName === selectedItem);
+        if (!item?._id) {
+          toast.error("Invalid item selected!");
+          return;
+        }
+        itemId = item._id;
+      } else {
+        // 🧩 If editing → use existing stock ID
+        itemId = editStockId;
+      }
+
+      // 🧩 Find warehouse ID
+      const warehouse = warehouses.find(
+        (w) => w.warehouseName === selectedWarehouse
+      );
+      if (!warehouse?._id) {
+        toast.error("Invalid warehouse selected!");
+        return;
+      }
+
+      const payload = {
+        openingStock: Number(openingStock),
+        purchaseRate: Number(purchaseRate),
+        sellingPrice: Number(sellingPrice),
+        wholesalePrice: Number(wholesalePrice),
+        warehouseId: warehouse._id,
+        minStockLevel: Number(minStockLevel),
+      };
+
+      // 🧩 Single unified API call
+      const res = await api.put(`/inventory/items/stock/${itemId}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.data.success) {
+        toast.success("Stock details updated successfully!");
+        fetchStock();
+        setIsAddOpen(false);
+
+        // Reset form
+        setSelectedItem("");
+        setSelectedWarehouse("");
+        setOpeningStock("");
+        setPurchaseRate("");
+        setSellingPrice("");
+        setWholesalePrice("");
+        setMinStockLevel("");
+        setIsEditMode(false);
+        setEditStockId(null);
+      } else {
+        toast.error(res.data.message || "Failed to update stock");
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error updating stock:", error);
+      toast.error(
+        error.response?.data?.message || "Server error while updating stock"
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEdit = (itemId) => {
-    toast.success(`Editing stock entry #${itemId}`);
+    const stockToEdit = stockData.find((s) => s._id === itemId);
+    if (!stockToEdit) {
+      toast.error("Stock entry not found!");
+      return;
+    }
+    // console.log(stockToEdit);
+
+    // ✅ Set edit mode
+    setIsEditMode(true);
+    setEditStockId(itemId);
+    setIsAddOpen(true);
+
+    // Prefill all fields
+    setSelectedItem(stockToEdit.itemName || "");
+    setSelectedWarehouse(stockToEdit?.warehouseId?.warehouseName || "");
+    setOpeningStock(stockToEdit.openingStock?.toString() || "");
+    setPurchaseRate(stockToEdit.purchaseRate?.toString() || "");
+    setSellingPrice(stockToEdit.sellingPrice?.toString() || "");
+    setWholesalePrice(stockToEdit.wholesalePrice?.toString() || "");
+    setMinStockLevel(stockToEdit.minStockLevel?.toString() || "");
   };
 
-  const handleDelete = (itemId) => {
-    toast.error(`Deleting stock entry #${itemId}`);
+  const handleDelete = async (ItemId) => {
+    // console.log(ItemId);
+
+    try {
+      setLoading(true);
+      toast.loading("Deleting product...");
+      const res = await api.delete(`/inventory/items/${ItemId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast.dismiss(); // remove loader
+
+      if (res.data?.success) {
+        toast.success("Stock deleted successfully!");
+        fetchStock(); // refresh table
+      } else {
+        toast.error(res.data?.message || "Failed to delete Stock");
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error deleting Stock:", error);
+      toast.error(
+        error.response?.data?.message || "Server error while deleting"
+      );
+    } finally {
+      setTimeout(() => setLoading(false), 500);
+    }
   };
 
   const handleView = (itemId) => {
-    toast.info(`Viewing stock details for #${itemId}`);
+    const stock = stockData.find((s) => s._id === itemId);
+    if (!stock) {
+      toast.error("Stock item not found!");
+      return;
+    }
+    setSelectedStock(stock);
+    setIsViewOpen(true);
   };
 
   const handleRestock = (itemId) => {
@@ -195,14 +354,6 @@ const StockPurchaseDetails = () => {
     return "healthy";
   };
 
-  const getLocationColor = (location) => {
-    const locationMap = {
-      "Main Warehouse": "bg-blue-50 text-blue-700 border-blue-200",
-      "Store Room A": "bg-purple-50 text-purple-700 border-purple-200",
-      "Cold Storage": "bg-cyan-50 text-cyan-700 border-cyan-200",
-    };
-    return locationMap[location] || "bg-gray-50 text-gray-700 border-gray-200";
-  };
 
   return (
     <DashboardLayout>
@@ -228,17 +379,41 @@ const StockPurchaseDetails = () => {
               Export Report
             </Button>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              <DialogTrigger asChild>
+              {
+                itemNames.length>0&&(
+                     <DialogTrigger
+                onClick={() => {
+                  // 🧠 Reset edit mode whenever adding new entry
+                  setIsEditMode(false);
+                  setEditStockId(null);
+
+                  // 🧼 Optional — clear input fields
+                  setSelectedItem("");
+                  setSelectedWarehouse("");
+                  setOpeningStock("");
+                  setPurchaseRate("");
+                  setSellingPrice("");
+                  setWholesalePrice("");
+                  setMinStockLevel("");
+                }}
+                asChild
+              >
                 <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Stock Entry
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
+
+                )
+              }
+           
+              <DialogContent className="max-w-2xl max-h-full overflow-y-scroll bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
                     <Plus className="w-5 h-5 text-primary" />
-                    Add Stock & Purchase Details
+                    {isEditMode
+                      ? "Edit Stock & Purchase Details"
+                      : "Add Stock & Purchase Details"}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 pt-4">
@@ -253,7 +428,15 @@ const StockPurchaseDetails = () => {
                         <div className="flex justify-center items-center h-12 border rounded-lg bg-muted/30">
                           <Loader className="w-5 h-5 text-primary animate-spin mr-2" />
                         </div>
+                      ) : isEditMode ? (
+                        // 🧩 In edit mode, show item name as a readonly input
+                        <Input
+                          value={selectedItem}
+                          readOnly
+                          className="border-2 bg-muted/50 text-foreground "
+                        />
                       ) : (
+                        // 🧩 In add mode, show dropdown select
                         <Select
                           value={selectedItem}
                           onValueChange={setSelectedItem}
@@ -293,6 +476,8 @@ const StockPurchaseDetails = () => {
                       <Input
                         type="number"
                         placeholder="0"
+                        value={openingStock}
+                        onChange={(e) => setOpeningStock(e.target.value)}
                         className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                       />
                     </div>
@@ -304,7 +489,6 @@ const StockPurchaseDetails = () => {
                       {warehouseLoading ? (
                         <div className="flex justify-center items-center h-12 border rounded-lg bg-muted/30">
                           <Loader className="w-5 h-5 text-primary animate-spin mr-2" />
-                          
                         </div>
                       ) : (
                         <Select
@@ -345,6 +529,8 @@ const StockPurchaseDetails = () => {
                       <Input
                         type="number"
                         placeholder="0.00"
+                        value={purchaseRate}
+                        onChange={(e) => setPurchaseRate(e.target.value)}
                         className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                       />
                     </div>
@@ -355,6 +541,8 @@ const StockPurchaseDetails = () => {
                       <Input
                         type="number"
                         placeholder="0.00"
+                        value={sellingPrice}
+                        onChange={(e) => setSellingPrice(e.target.value)}
                         className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                       />
                     </div>
@@ -365,6 +553,8 @@ const StockPurchaseDetails = () => {
                       <Input
                         type="number"
                         placeholder="0.00"
+                        value={wholesalePrice}
+                        onChange={(e) => setWholesalePrice(e.target.value)}
                         className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                       />
                     </div>
@@ -379,15 +569,27 @@ const StockPurchaseDetails = () => {
                     <Input
                       type="number"
                       placeholder="0"
+                      value={minStockLevel}
+                      onChange={(e) => setMinStockLevel(e.target.value)}
                       className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                     />
                   </div>
 
                   <Button
-                    className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium"
+                    className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium flex items-center justify-center"
                     onClick={handleSaveStock}
+                    disabled={saving}
                   >
-                    Save Stock Details
+                    {saving ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        {isEditMode ? "Updating..." : "Saving..."}
+                      </div>
+                    ) : isEditMode ? (
+                      "Update Stock"
+                    ) : (
+                      "Save Stock Details"
+                    )}
                   </Button>
                 </div>
               </DialogContent>
@@ -582,14 +784,14 @@ const StockPurchaseDetails = () => {
                       </td>
                     </tr>
                   ) : filteredStock.length > 0 ? (
-                    filteredStock.map((item, index) => (
+                    currentStock.map((item, index) => (
                       <tr
                         key={item._id || index}
                         className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
                       >
                         {visibleFields.includes("sr") && (
                           <td className="px-6 py-4 font-semibold">
-                            {index + 1}
+                            {startIndex + index + 1}
                           </td>
                         )}
 
@@ -724,6 +926,13 @@ const StockPurchaseDetails = () => {
                   )}
                 </tbody>
               </table>
+              {/* Pagination Component */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredStock.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </CardContent>
         </Card>
@@ -804,6 +1013,12 @@ const StockPurchaseDetails = () => {
           </Button>
         </DialogContent>
       </Dialog>
+      {/* stockView */}
+      <StockViewModal
+        isOpen={isViewOpen}
+        onClose={setIsViewOpen}
+        stock={selectedStock}
+      />
     </DashboardLayout>
   );
 };

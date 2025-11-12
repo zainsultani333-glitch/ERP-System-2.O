@@ -23,58 +23,62 @@ const InvoicePDFTemplate = React.forwardRef(({ invoice }, ref) => {
       "VAT applied under Margin Scheme – Article 297A of French Tax Code";
   }
 
-  // 🧩 Dynamic invoice prefix
-  const companyCode = invoice.companyCode || "XX"; // e.g. "VE", "MA"
+  const companyCode = invoice.companyCode || "XX";
   const formattedInvoiceNo = `INV-${companyCode}-${invoice.invoiceNo}`;
 
   return (
     <div
       ref={ref}
       id="invoice-pdf"
-      className="bg-white p-8 text-black text-sm"
+      className="bg-white p-10 text-black text-sm"
       style={{
         width: "794px",
         margin: "0 auto",
         display: "none",
+        fontFamily: "Arial, sans-serif",
         position: "relative",
       }}
     >
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-4">
-            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwOIUSceZhRo-Y1RBaOc9lDksAvPGSHe4EYw&s" alt="Company Logo" className="w-32 mb-2" />
-            <div>
-              <h2 className="font-bold text-lg">VESTIAIRE ST. HONORÉ</h2>
-              <p>
-                229 Rue Saint-Honoré
-                <br />
-                75001 Paris, France
-                <br />
-                VAT: FR401234444
-              </p>
-            </div>
+      {/* ================= HEADER ================= */}
+      <div className="flex justify-between items-start mb-8">
+        {/* LEFT: Company Info */}
+        <div className="w-1/2 flex gap-4 items-start">
+          <img
+            src="/Images/logoinovice.jfif"
+            alt="Company Logo"
+            className="w-32 mt-1"
+          />
+          <div>
+            <h2 className="font-bold text-lg uppercase tracking-wide">
+              VESTIAIRE ST. HONORÉ
+            </h2>
+            <p className="leading-tight mt-1 text-sm">
+              229 Rue Saint-Honoré
+              <br />
+              75001 Paris, France
+              <br />
+              VAT: FR401234444
+            </p>
           </div>
         </div>
 
-        <div className="text-right">
-          <p className="font-semibold">Receiver :</p>
+        {/* RIGHT: Receiver Info */}
+        <div className="w-1/2 text-right leading-tight text-sm">
+          <h3 className="font-semibold">{invoice.customerName || "John Doe"}</h3>
           <p>
-            {invoice.customerName} <br />
-            {invoice.customerCompany} <br />
-            {invoice.customerCountry}
+            {invoice.customerCompany || "ABC Traders"}
+            <br />
+            {invoice.customerCountry || "France"}
             <br />
             {invoice.vatNo && (
-              <span className="text-xs text-gray-700">
-                VAT: {invoice.vatNo}
-              </span>
+              <span>VAT: {invoice.vatNo}</span>
             )}
           </p>
         </div>
       </div>
 
-      {/* Invoice Meta */}
-      <div className="mb-6">
+      {/* ================= INVOICE META ================= */}
+      <div className="mb-6 border-b pb-3">
         <p>
           <strong>Invoice No :</strong> {formattedInvoiceNo}
         </p>
@@ -82,14 +86,14 @@ const InvoicePDFTemplate = React.forwardRef(({ invoice }, ref) => {
           <strong>Date :</strong> {invoice.date}
         </p>
         {vatMention && (
-          <p className="italic text-gray-700">{vatMention}</p>
+          <p className="italic text-gray-700 text-xs mt-1">{vatMention}</p>
         )}
       </div>
 
-      {/* Items Table */}
-      <table className="w-full border-collapse text-sm mb-6">
+      {/* ================= ITEMS TABLE ================= */}
+      <table className="w-full border-collapse text-sm mb-8">
         <thead>
-          <tr className="bg-gray-100 border-y">
+          <tr className="bg-gray-100 border-y border-gray-300">
             <th className="text-left p-2">Description</th>
             <th className="text-right p-2">Quantity</th>
             <th className="text-right p-2">Unit Price</th>
@@ -99,7 +103,7 @@ const InvoicePDFTemplate = React.forwardRef(({ invoice }, ref) => {
         </thead>
         <tbody>
           {invoice.items.map((item, idx) => (
-            <tr key={idx} className="border-b">
+            <tr key={idx} className="border-b border-gray-200">
               <td className="p-2">{item.description}</td>
               <td className="text-right p-2">{item.quantity}</td>
               <td className="text-right p-2">
@@ -114,9 +118,10 @@ const InvoicePDFTemplate = React.forwardRef(({ invoice }, ref) => {
         </tbody>
       </table>
 
-      {/* Bank + Totals Section */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="border p-3 rounded">
+      {/* ================= BANK + TOTALS ================= */}
+      <div className="grid grid-cols-2 gap-6 mb-6">
+        {/* Bank Details */}
+        <div className="border rounded-md p-4">
           <h3 className="font-semibold text-blue-700 mb-2">Bank Details</h3>
           <p>
             <strong>Bank:</strong> {invoice.bankDetails.bank}
@@ -135,31 +140,31 @@ const InvoicePDFTemplate = React.forwardRef(({ invoice }, ref) => {
           </p>
         </div>
 
-        <div className="border p-3 rounded">
-          <div className="flex justify-between">
+        {/* Totals Section */}
+        <div className="border rounded-md p-4">
+          <div className="flex justify-between mb-1">
             <span>Net amount</span>
             <span>{netTotal.toLocaleString()} €</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between mb-1">
             <span>VAT</span>
             <span>{vatTotal.toLocaleString()} €</span>
           </div>
-          <div className="flex justify-between items-center bg-blue-900 text-white font-semibold h-10 pb-2 px-2 mt-3 rounded-md">
+         <div className="flex justify-between items-center bg-blue-900 text-white font-semibold h-10 pb-2 px-1 mt-3 rounded-md">
             <p className="inline-flex justify-center items-center">Total</p>
             <p className="inline-flex justify-center items-center">
               {grandTotal.toLocaleString()} €
             </p>
           </div>
-
-          <div className="flex justify-between mt-1">
+          <div className="flex justify-between mt-2">
             <span>Amount Due</span>
             <span>0.00 €</span>
           </div>
         </div>
       </div>
 
-      {/* Footer Note */}
-      <p className="text-xs mt-32 leading-relaxed text-justify">
+      {/* ================= FOOTER NOTE ================= */}
+      <p className="text-xs mt-40 leading-relaxed text-justify text-gray-700">
         No discount will be granted for early settlement. Any late payment shall
         automatically give rise to a penalty calculated at three times the
         statutory interest rate (Article L 441-10, paragraph 12 of the French
@@ -169,10 +174,8 @@ const InvoicePDFTemplate = React.forwardRef(({ invoice }, ref) => {
         French Commercial Code.
       </p>
 
-      {/* Footer Company Details (Bold + Italic + Always on Each Page) */}
-      <p
-         className="text-center text-xs mt-10 font-bold italic"
-      >
+      {/* ================= FOOTER COMPANY DETAILS ================= */}
+      <p className="text-center text-xs mt-6 font-semibold italic text-gray-800">
         VESTIAIRE SAINT-HONORÉ SAS — Share capital of 10,000€ — Company No
         94479826000016
       </p>
