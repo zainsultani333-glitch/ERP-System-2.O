@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import Pagination from "../../components/Pagination";
 import {
   Plus,
   Search,
@@ -30,6 +31,7 @@ import {
   Users,
   AlertCircle,
   List,
+  Loader,
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -53,14 +55,23 @@ const WareHouse = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
+  const [buttonLoading, setButtonLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Loader
-  const Loader = ({ message = "Loading..." }) => {
+  const TableLoader = ({ message = "Loading..." }) => {
     return (
-      <div className="flex flex-col items-center justify-center py-16 w-full">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-muted-foreground font-medium">{message}</p>
-      </div>
+      <tr>
+        <td colSpan="9" className="py-20 text-center">
+          <div className="flex flex-col items-center justify-center">
+            <Loader className="w-10 h-10 text-primary animate-spin mb-2" />
+            <p className="text-sm text-muted-foreground font-medium">
+              {message}
+            </p>
+          </div>
+        </td>
+      </tr>
     );
   };
 
@@ -85,7 +96,7 @@ const WareHouse = () => {
     } catch (error) {
       console.error("❌ Failed to fetch Warehouse:", error);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 1500);
     }
   }, []);
 
@@ -150,7 +161,7 @@ const WareHouse = () => {
   // Handle Save
   const handleSaveWarehouse = async () => {
     try {
-      setLoading(true);
+      setButtonLoading(true);
 
       // Construct payload from form fields (you’ll add state for these below)
       const payload = {
@@ -163,8 +174,7 @@ const WareHouse = () => {
         },
       };
 
-      const response = await api.post(
-        `/warehouses`, payload);
+      const response = await api.post(`/warehouses`, payload);
 
       if (response.data.success) {
         toast.success("✅ Warehouse added successfully!");
@@ -185,7 +195,7 @@ const WareHouse = () => {
       console.error("❌ Error adding warehouse:", error);
       toast.error("Error adding warehouse!");
     } finally {
-      setLoading(false);
+      setButtonLoading(false);
     }
   };
 
@@ -203,9 +213,7 @@ const WareHouse = () => {
 
     try {
       setLoading(true);
-      const response = await api.delete(
-        `/warehouses/${id}`
-      );
+      const response = await api.delete(`/warehouses/${id}`);
 
       if (response.data.success) {
         toast.success("✅ Warehouse deleted successfully!");
@@ -247,7 +255,7 @@ const WareHouse = () => {
   // Handle Update
   const handleUpdateWarehouse = async () => {
     try {
-      setLoading(true);
+      setButtonLoading(true);
 
       const payload = {
         warehouseName: newWarehouse.name,
@@ -259,10 +267,7 @@ const WareHouse = () => {
         },
       };
 
-      const response = await api.put(
-        `/warehouses/${newWarehouse.id}`,
-        payload
-      );
+      const response = await api.put(`/warehouses/${newWarehouse.id}`, payload);
 
       if (response.data.success) {
         toast.success("✅ Warehouse updated successfully!");
@@ -283,7 +288,7 @@ const WareHouse = () => {
       console.error("❌ Error updating warehouse:", error);
       toast.error("Error updating warehouse!");
     } finally {
-      setLoading(false);
+      setButtonLoading(false);
     }
   };
 
@@ -296,6 +301,19 @@ const WareHouse = () => {
     (sum, w) => sum + w.PurchaseValue,
     0
   );
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentWarehouses = filteredWarehouses.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+
+  // Search Bar
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // reset to page 1 on every new search
+  };
 
   return (
     <DashboardLayout>
@@ -398,14 +416,16 @@ const WareHouse = () => {
                           <Phone className="w-3 h-3" /> Contact
                         </Label>
                         <Input
+                          type="text"
                           placeholder="+92 3XX XXXXXXX"
                           value={newWarehouse.inchargeContact}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, ""); // remove all non-digits
                             setNewWarehouse({
                               ...newWarehouse,
-                              inchargeContact: e.target.value,
-                            })
-                          }
+                              inchargeContact: value,
+                            });
+                          }}
                         />
                       </div>
                       <div className="space-y-2">
@@ -429,14 +449,20 @@ const WareHouse = () => {
 
                   <Button
                     className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium"
-                    onClick={
-                      () =>
-                        newWarehouse.id
-                          ? handleUpdateWarehouse() // update if id exists
-                          : handleSaveWarehouse() // save new warehouse
+                    onClick={() =>
+                      newWarehouse.id
+                        ? handleUpdateWarehouse()
+                        : handleSaveWarehouse()
                     }
+                    disabled={buttonLoading} // disable while loading
                   >
-                    {newWarehouse.id ? "Update Warehouse" : "Save Warehouse"}
+                    {buttonLoading ? (
+                      <Loader className="w-5 h-5 animate-spin mx-auto" />
+                    ) : newWarehouse.id ? (
+                      "Update Warehouse"
+                    ) : (
+                      "Save Warehouse"
+                    )}
                   </Button>
                 </div>
               </DialogContent>
@@ -532,14 +558,13 @@ const WareHouse = () => {
                 placeholder="Search by warehouse name, address, incharge, stock, or value..."
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50 bg-background/80 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearch}
               />
             </div>
           </CardContent>
         </Card>
 
         {/* Warehouse Table */}
-
 
         <Card className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 pb-4">
@@ -568,7 +593,6 @@ const WareHouse = () => {
               </div>
             </div>
           </CardHeader>
-
 
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -612,23 +636,19 @@ const WareHouse = () => {
                 </thead>
 
                 {loading ? (
-                  <tbody>
-                    <tr>
-                      <td colSpan={visibleFields.length + 1}>
-                        <Loader message="Loading warehouse data..." />
-                      </td>
-                    </tr>
-                  </tbody>
+                  <TableLoader message="Fetching categories..." />
                 ) : (
                   <tbody className="divide-y divide-border/30">
                     {filteredWarehouses.length > 0 ? (
-                      filteredWarehouses.map((warehouse, index) => (
+                      currentWarehouses.map((warehouse, index) => (
                         <tr
                           key={warehouse.id}
                           className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
                         >
                           {visibleFields.includes("sr") && (
-                            <td className="px-6 py-4 font-semibold">{index + 1}</td>
+                            <td className="px-6 py-4 font-semibold">
+                              {indexOfFirstItem + index + 1}
+                            </td>
                           )}
                           {visibleFields.includes("name") && (
                             <td className="px-6 py-4">
@@ -650,7 +670,9 @@ const WareHouse = () => {
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium">{warehouse.incharge?.name}</span>
+                                <span className="font-medium">
+                                  {warehouse.incharge?.name}
+                                </span>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button
@@ -661,7 +683,10 @@ const WareHouse = () => {
                                       <MoreVertical className="w-4 h-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-56">
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="w-56"
+                                  >
                                     <DropdownMenuItem className="flex items-center gap-2">
                                       <Phone className="w-3 h-3" />
                                       {warehouse.incharge?.contact}
@@ -711,9 +736,12 @@ const WareHouse = () => {
                                     id: warehouse.id,
                                     name: warehouse.name,
                                     address: warehouse.address,
-                                    inchargeName: warehouse.incharge?.name || "",
-                                    inchargeContact: warehouse.incharge?.contact || "",
-                                    inchargeEmail: warehouse.incharge?.email || "",
+                                    inchargeName:
+                                      warehouse.incharge?.name || "",
+                                    inchargeContact:
+                                      warehouse.incharge?.contact || "",
+                                    inchargeEmail:
+                                      warehouse.incharge?.email || "",
                                   });
                                   setIsAddOpen(true);
                                 }}
@@ -751,14 +779,20 @@ const WareHouse = () => {
                       </tr>
                     )}
                   </tbody>
-
                 )}
               </table>
             </div>
+            {/* Pagination Component */}
+            {filteredWarehouses.length > itemsPerPage && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredWarehouses.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            )}
           </CardContent>
-
         </Card>
-
       </div>
 
       <Dialog open={isCustomizeOpen} onOpenChange={handleCustomizeOpen}>
