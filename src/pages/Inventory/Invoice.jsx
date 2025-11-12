@@ -62,6 +62,8 @@ const Invoice = () => {
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [sendingEmail, setSendingEmail] = useState(false);
+
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -123,6 +125,7 @@ const Invoice = () => {
 
   const filteredInvoice = invoiceData
     .map((inv) => ({
+      _id: inv._id, // ✅ include this
       invoiceNo: inv.invoiceNo,
       date: new Date(inv.invoiceDate).toLocaleDateString(),
       customerName: inv.customerName,
@@ -134,6 +137,7 @@ const Invoice = () => {
       vatAmount: inv.vatTotal,
       totalInclVAT: inv.grandTotal,
     }))
+
     .filter(
       (invoice) =>
         invoice.customerName
@@ -205,6 +209,55 @@ const Invoice = () => {
     }
     setSelectedInvoice(invoice);
     setIsViewOpen(true);
+  };
+  const handleSendOption = async (type, invoice) => {
+    if (!invoice) {
+      toast.error("No invoice selected");
+      return;
+    }
+
+    if (type === "email") {
+      try {
+        setSendingEmail(true);
+        toast.loading("Sending invoice via email...");
+
+        const payload = {
+          to: invoice.customerEmail || "emanali262770@gmail.com",
+          subject: `Your Invoice ${invoice.invoiceNo} from VESTIAIRE ST. HONORÉ`,
+          message: `Hello ${
+            invoice.customerName || "Customer"
+          }, please find your invoice attached.`,
+        };
+
+        const response = await api.post(
+          `/inventory/invoice/${invoice._id}/send-email`,
+          payload,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        toast.dismiss();
+        if (response.data.success) toast.success(" Email sent successfully!");
+        else toast.error(response.data.message || "Failed to send email.");
+      } catch (error) {
+        toast.dismiss();
+        console.error("Email send error:", error);
+        toast.error("Error occurred while sending the email.");
+      } finally {
+        setSendingEmail(false);
+      }
+    }
+
+    if (type === "whatsapp") {
+      if (!invoice.customerPhone) {
+        toast.error("Customer phone number missing!");
+        return;
+      }
+      const msg = encodeURIComponent(
+        `Hello ${invoice.customerName}, your invoice ${invoice.invoiceNo} is ready.`
+      );
+      const phone = invoice.customerPhone.replace(/\D/g, "");
+      window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
+    }
   };
 
   return (
@@ -589,7 +642,11 @@ const Invoice = () => {
                                   size="sm"
                                   className="flex items-center  text-gray-700"
                                 >
-                                  <Send className="w-4 h-4 text-primary" />
+                                  {sendingEmail ? (
+                                    <Loader className="w-4 h-4 text-primary animate-spin" />
+                                  ) : (
+                                    <Send className="w-4 h-4 text-primary" />
+                                  )}
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
