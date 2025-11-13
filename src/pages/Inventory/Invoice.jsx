@@ -57,6 +57,8 @@ import InvoiceViewModal from "./Models/InvoiceViewModal";
 const Invoice = () => {
   const [exporting, setExporting] = useState(false);
   const [invoiceNo, setInvoiceNo] = useState("");
+  const [customerList, setCustomerList] = useState([]);
+  const [customerLoading, setCustomerLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8; // adjust per your need
 
@@ -202,6 +204,43 @@ const Invoice = () => {
       }
     }
   }, [invoiceData, isAddOpen, isEditMode]);
+
+  // fetch customers
+
+  const fetchCustomers = async () => {
+    try {
+      setCustomerLoading(true);
+      const res = await api.get("/customers", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.data.success) {
+        setCustomerList(res.data.data);
+      } else {
+        toast.error("Failed to fetch customers");
+      }
+    } catch (error) {
+      console.error("Customer fetch error:", error);
+      toast.error("Error fetching customers");
+    } finally {
+      setCustomerLoading(false);
+    }
+  };
+  useEffect(() => {
+    if (isAddOpen) fetchCustomers();
+  }, [isAddOpen]);
+
+  // auto slect the regime and number of vat
+  // Auto-fill VAT Number & VAT Regime on customer selection
+  useEffect(() => {
+    if (!selectedCustomer) return;
+
+    const selected = customerList.find((c) => c._id === selectedCustomer);
+    if (selected) {
+      setCustomerVAT(selected.vatNumber || "");
+      setVatRegime(selected.vatRegime || "");
+    }
+  }, [selectedCustomer, customerList]);
 
   const filteredInvoice = invoiceData
     .map((inv) => ({
@@ -444,48 +483,65 @@ const Invoice = () => {
                     </div>
                   </div>
 
-                  {/* Customer ID + VAT */}
+                 
+                  {/* Customer + VAT Number + VAT Regime */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                    {/* Customer Select */}
+                    <div className="space-y-3">
                       <Label className="flex items-center gap-2">
                         <User className="w-4 h-4" /> Customer
                       </Label>
-                      <Select onValueChange={(v) => setSelectedCustomer(v)}>
-                        <SelectTrigger className="bg-muted/50 border-2 focus:ring-2 focus:ring-primary/20">
-                          <SelectValue placeholder="Select customer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cust001">John Doe</SelectItem>
-                          <SelectItem value="cust002">ABC Traders</SelectItem>
-                          <SelectItem value="cust003">XYZ Pvt Ltd</SelectItem>
-                        </SelectContent>
-                      </Select>
+
+                      {customerLoading ? (
+                        <div className="flex justify-center items-center h-12 border rounded-lg bg-muted/30">
+                          <Loader className="w-5 h-5 text-primary animate-spin mr-2" />
+                        </div>
+                      ) : (
+                        <Select
+                          value={selectedCustomer}
+                          onValueChange={setSelectedCustomer}
+                        >
+                          <SelectTrigger className=" border-2 focus:ring-2 focus:ring-primary/20">
+                            <SelectValue placeholder="Select customer" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            {customerList.length > 0 ? (
+                              customerList.map((c) => (
+                                <SelectItem key={c._id} value={c._id}>
+                                  {c.customerName}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem disabled>
+                                No customers found
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>Customer VAT No.</Label>
-                      <Input
-                        value={customerVAT}
-                        onChange={(e) => setCustomerVAT(e.target.value)}
-                        placeholder="VAT1234"
-                        className="border-2 focus:ring-2 focus:ring-primary/20"
-                      />
-                    </div>
-                  </div>
+                    {/* VAT Number + VAT Regime on same line */}
+                    <div className="space-y-1">
+                      <Label>VAT Number + VAT Regime</Label>
 
-                  {/* VAT Regime */}
-                  <div className="space-y-2">
-                    <Label>VAT Regime</Label>
-                    <Select onValueChange={(v) => setVatRegime(v)}>
-                      <SelectTrigger className="bg-muted/50 border-2 focus:ring-2 focus:ring-primary/20">
-                        <SelectValue placeholder="Select VAT Regime" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0%">0%</SelectItem>
-                        <SelectItem value="Local VAT">Local VAT</SelectItem>
-                        <SelectItem value="VAT Margin">VAT Margin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          value={customerVAT}
+                          readOnly
+                          className="border-2 bg-muted/50"
+                          placeholder="VAT Number"
+                        />
+
+                        <Input
+                          value={vatRegime}
+                          readOnly
+                          className="border-2 bg-muted/50"
+                          placeholder="VAT Regime"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* ITEM SECTION */}
