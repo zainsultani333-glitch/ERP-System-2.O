@@ -368,14 +368,6 @@ const ProductInfo = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleDownload}
-              className="border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 shadow-sm"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger
                 asChild

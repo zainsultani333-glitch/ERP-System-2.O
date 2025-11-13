@@ -538,7 +538,7 @@ const WareHouse = () => {
                     Total Stock Value
                   </p>
                   <p className="text-2xl font-bold text-purple-900">
-                    PKR {totalStockValue.toLocaleString()}
+                    € {totalStockValue.toLocaleString()}
                   </p>
                 </div>
                 <div className="p-2 bg-purple-500/10 rounded-lg">

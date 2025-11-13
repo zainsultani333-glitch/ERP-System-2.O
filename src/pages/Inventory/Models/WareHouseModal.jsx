@@ -37,7 +37,7 @@ const WarehouseViewModal = ({ isOpen, onClose, viewWarehouse }) => {
                             <p className="font-semibold">{viewWarehouse.itemsInStock}</p>
 
                             <p className="font-medium text-muted-foreground">Purchase Value:</p>
-                            <p className="font-semibold">PKR {viewWarehouse.PurchaseValue.toLocaleString()}</p>
+                            <p className="font-semibold">€ {viewWarehouse.PurchaseValue.toLocaleString()}</p>
                         </div>
                     </div>
                 )}

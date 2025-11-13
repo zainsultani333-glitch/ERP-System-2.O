@@ -290,14 +290,6 @@ const CategoryPage = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleDownload}
-              className="border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 shadow-sm"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
-            </Button>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
@@ -393,8 +385,8 @@ const CategoryPage = () => {
                         ? "Updating..."
                         : "Saving..."
                       : editingCategory
-                      ? "Update Category"
-                      : "Save Category"}
+                        ? "Update Category"
+                        : "Save Category"}
                   </Button>
                 </div>
               </DialogContent>

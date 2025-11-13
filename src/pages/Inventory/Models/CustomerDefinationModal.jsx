@@ -50,9 +50,6 @@ const CustomerViewModal = ({ isOpen, onClose, customer, categoryList }) => {
                                 <p className="font-medium text-muted-foreground">Customer Type:</p>
                                 <p className="font-semibold">{customer.customerType}</p>
 
-                                <p className="font-medium text-muted-foreground">Category:</p>
-                                <p className="font-semibold">{getCategoryName(customer.categoryId)}</p>
-
                                 <p className="font-medium text-muted-foreground">VAT Regime:</p>
                                 <p className="font-semibold">{customer.vatRegime}</p>
 

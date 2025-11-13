@@ -54,7 +54,6 @@ const CustomerDefinition = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [customerList, setCustomerList] = useState([]);
   const [editingCustomer, setEditingCustomer] = useState(null);
-  const [categoryList, setCategoryList] = useState([]);
   const [viewCustomer, setViewCustomer] = useState(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -108,49 +107,6 @@ const CustomerDefinition = () => {
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
 
-  // 🟢 Fetch Category Data
-  const fetchCategoryList = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await api.get("/categories");
-      console.log("Res Category", response.data);
-
-      if (response.data.success && Array.isArray(response.data.data)) {
-        const formattedData = response.data.data.map((item) => ({
-          id: item._id,
-          name: item.categoryName || "-",
-          description: item.description || "-",
-          status: item.status || "-",
-          logo: item.logo?.url || "",
-          createdAt: new Date(item.createdAt).toLocaleDateString(),
-        }));
-
-        setCategoryList(formattedData);
-
-        // ✅ Set summary from API response
-        setSummary({
-          totalCategories:
-            response.data.summary?.totalCategories || formattedData.length,
-          activeCategories:
-            response.data.summary?.activeCategories ||
-            formattedData.filter((c) => c.status === "Active").length,
-        });
-      } else {
-        console.warn("⚠️ Unexpected API response structure:", response.data);
-        setCategoryList([]);
-        setSummary({ totalCategories: 0, activeCategories: 0 });
-      }
-    } catch (error) {
-      console.error("❌ Failed to fetch Categories:", error);
-      setSummary({ totalCategories: 0, activeCategories: 0 });
-    } finally {
-      setTimeout(() => setLoading(false), 1500);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCategoryList();
-  }, [fetchCategoryList]);
 
   // 🟢 Fetch Customer Data
   const fetchCustomerList = useCallback(async () => {
@@ -328,6 +284,7 @@ const CustomerDefinition = () => {
       toast.success("Customer deleted successfully!");
       // Remove deleted customer from list
       setCustomerList((prev) => prev.filter((c) => c.id !== id));
+      fetchCustomerList();
     } catch (error) {
       console.error("❌ Failed to delete customer:", error.response || error);
       toast.error("Failed to delete customer");
@@ -382,10 +339,6 @@ const CustomerDefinition = () => {
     toast.success("Display settings updated!");
   };
 
-  const getCategoryName = (categoryId) => {
-    const category = categoryList.find((cat) => cat.id === categoryId);
-    return category ? category.name : "-";
-  };
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -477,14 +430,17 @@ const CustomerDefinition = () => {
                         Contact Person
                       </Label>
                       <Input
-                        placeholder="Ali Khan"
+                        placeholder="Enter number"
                         value={newCustomer.contactPerson}
-                        onChange={(e) =>
-                          setNewCustomer({
-                            ...newCustomer,
-                            contactPerson: e.target.value,
-                          })
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d*$/.test(value)) { // only digits allowed
+                            setNewCustomer({
+                              ...newCustomer,
+                              contactPerson: value,
+                            });
+                          }
+                        }}
                         className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                       />
                     </div>
@@ -586,36 +542,6 @@ const CustomerDefinition = () => {
                       </Select>
                     </div>
 
-                    {/* Category */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        Category
-                      </Label>
-                      <Select
-                        value={newCustomer.categoryId}
-                        onValueChange={(value) =>
-                          setNewCustomer({ ...newCustomer, categoryId: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categoryList.length > 0 ? (
-                            categoryList.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem disabled value="">
-                              No categories available
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
                     {/* VAT Regime */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium flex items-center gap-2">
@@ -699,8 +625,8 @@ const CustomerDefinition = () => {
                         ? "Updating..."
                         : "Saving..."
                       : editingCustomer
-                      ? "Update Customer"
-                      : "Save Customer"}
+                        ? "Update Customer"
+                        : "Save Customer"}
                   </Button>
                 </div>
               </DialogContent>
@@ -858,11 +784,6 @@ const CustomerDefinition = () => {
                       Customer Type
                     </th>
                   )}
-                  {visibleFields.includes("category") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                      Category
-                    </th>
-                  )}
                   {visibleFields.includes("vatNumber") && (
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                       VAT Number
@@ -909,7 +830,7 @@ const CustomerDefinition = () => {
                   {currentCustomers.map((c, index) => (
                     <tr
                       key={c.id}
-                      className="group hover:bg-primary/5 transition-all duration-300 ease-in-out"
+                      className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
                     >
                       {visibleFields.includes("sr") && (
                         <td className="px-6 py-4 font-semibold">
@@ -930,11 +851,6 @@ const CustomerDefinition = () => {
                       )}
                       {visibleFields.includes("customerType") && (
                         <td className="px-6 py-4">{c.customerType}</td>
-                      )}
-                      {visibleFields.includes("category") && (
-                        <td className="px-6 py-4">
-                          {getCategoryName(c.categoryId)}
-                        </td>
                       )}
                       {visibleFields.includes("vatNumber") && (
                         <td className="px-6 py-4">{c.vatNumber}</td>
@@ -1030,7 +946,6 @@ const CustomerDefinition = () => {
               { key: "email", label: "Email" },
               { key: "country", label: "Country" },
               { key: "customerType", label: "Customer Type" },
-              { key: "category", label: "Category" },
               { key: "vatNumber", label: "VAT Number" },
               { key: "vatRegime", label: "VAT Regime" },
               { key: "vatRate", label: "VAT Rate (%)" },
@@ -1079,7 +994,6 @@ const CustomerDefinition = () => {
         isOpen={isViewOpen}
         onClose={() => setIsViewOpen(false)}
         customer={viewCustomer}
-        categoryList={categoryList}
       />
     </DashboardLayout>
   );

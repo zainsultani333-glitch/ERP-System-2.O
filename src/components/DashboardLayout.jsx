@@ -28,7 +28,7 @@ import {
 
   Tag,
 
-  FileSpreadsheet 
+  FileSpreadsheet
 
 } from "lucide-react";
 import { ClipboardList, ArrowRightLeft } from "lucide-react";
@@ -54,20 +54,13 @@ const navigation = [
     subNav: [
       { name: "Product", href: "/inventory/productinfo", icon: Box },
       { name: "Stock & Purchase", href: "/inventory/stock-purchase", icon: ShoppingBag },
-
+      { name: "Invoice", href: "/inventory/invoice", icon: FileSpreadsheet },
+      { name: "Customer Defination", href: "/inventory/customer-defination", icon: User },
+      { name: "Category", href: "/inventory/category-fields", icon: Tag },
+      { name: "WareHouse", href: "/inventory/warehouse", icon: Warehouse },
       { name: "Supplier Information", href: "/inventory/supplier-information", icon: Container },
       { name: "Sales History", href: "/inventory/sales-history", icon: ClipboardList },
       { name: "Transaction Traking", href: "/inventory/transaction-traking", icon: ArrowRightLeft },
-      { name: "WareHouse", href: "/inventory/warehouse", icon: Warehouse },
-
-      { name: "Invoice", href: "/inventory/invoice", icon: FileSpreadsheet },
-
-      { name: "Customer Defination", href: "/inventory/customer-defination", icon: User },
-
-      { name: "Category", href: "/inventory/category-fields", icon: Tag },
-
-
-
     ],
   },
   {
@@ -94,7 +87,7 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openSubNav, setOpenSubNav] = useState({});
-const { logout } = useAuth();
+  const { logout } = useAuth();
 
   const selectedCompany = JSON.parse(localStorage.getItem("selectedCompany") || "{}");
   const isInventoryActive = location.pathname.startsWith("/inventory");
