@@ -64,6 +64,7 @@ const Invoice = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [status, setStatus] = useState("Draft");
   const [activeTab, setActiveTab] = useState("all");
+  const [editingItemIndex, setEditingItemIndex] = useState(null);
   const itemsPerPage = 8;
 
   const [invoiceDate, setInvoiceDate] = useState(
@@ -146,41 +147,6 @@ const Invoice = () => {
     }
   };
 
-  // Add item to array
-  const handleAddItem = () => {
-    if (!itemId || !quantity || !unitPrice) {
-      toast.error("Please fill all item fields");
-      return;
-    }
-
-    const selectedItem = itemsList.find(item => item._id === itemId);
-
-    const newItem = {
-      itemId,
-      description: description || selectedItem?.itemName || "Item",
-      quantity: Number(quantity),
-      unitPrice: Number(unitPrice),
-      vatRegime: vatRegime,
-      vatRate: Number(vatRate) / 100,
-      totalExclVAT,
-      vatAmount,
-      totalInclVAT,
-    };
-
-    setInvoiceItems([...invoiceItems, newItem]);
-
-    // Reset fields
-    setItemId("");
-    setDescription("");
-    setQuantity("");
-    setUnitPrice("");
-    setVatRate("");
-    setTotalExclVAT(0);
-    setVatAmount(0);
-    setTotalInclVAT(0);
-
-    toast.success("Item added");
-  };
 
   // Remove item from array
   const handleRemoveItem = (index) => {
@@ -310,38 +276,142 @@ const Invoice = () => {
     try {
       setIsEditMode(true);
       setEditingInvoiceId(invoice._id);
-      
+
+      // Fetch complete invoice data from API
+      const response = await api.get(`/inventory/invoice/${invoice._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.data.success) {
+        throw new Error("Failed to fetch invoice details");
+      }
+
+      const fullInvoice = response.data.data;
+      console.log("Full invoice data:", fullInvoice);
+
       // Populate form with existing invoice data
-      setSelectedCustomer(invoice.customer?._id || invoice.customer);
-      setCustomerVAT(invoice.customerVAT || "");
-      setVatRegime(invoice.items?.[0]?.vatRegime || "");
-      setStatus(invoice.status || "Draft");
-      setInvoiceDate(invoice.invoiceDate?.split('T')[0] || new Date().toISOString().split("T")[0]);
-      
+      setSelectedCustomer(fullInvoice.customer?._id || fullInvoice.customer);
+      setCustomerVAT(fullInvoice.customerVAT || "");
+      setVatRegime(fullInvoice.items?.[0]?.vatRegime || "Local");
+      setStatus(fullInvoice.status || "Draft");
+      setInvoiceDate(fullInvoice.invoiceDate?.split('T')[0] || new Date().toISOString().split("T")[0]);
+
       // Set invoice items
-      if (invoice.items && invoice.items.length > 0) {
-        const formattedItems = invoice.items.map(item => ({
+      if (fullInvoice.items && fullInvoice.items.length > 0) {
+        const formattedItems = fullInvoice.items.map(item => ({
           itemId: item.itemId,
           description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           vatRegime: item.vatRegime,
           vatRate: item.vatRate,
-          totalExclVAT: item.quantity * item.unitPrice,
-          vatAmount: (item.quantity * item.unitPrice * item.vatRate),
-          totalInclVAT: item.quantity * item.unitPrice * (1 + item.vatRate)
+          totalExclVAT: item.totalExclVAT || (item.quantity * item.unitPrice),
+          vatAmount: item.vatAmount || (item.quantity * item.unitPrice * item.vatRate),
+          totalInclVAT: item.totalInclVAT || (item.quantity * item.unitPrice * (1 + item.vatRate))
         }));
         setInvoiceItems(formattedItems);
       }
 
-      setInvoiceNo(invoice.invoiceNo || "INV-DRAFT");
+      setInvoiceNo(fullInvoice.invoiceNo || "INV-DRAFT");
       setIsAddOpen(true);
+
+      toast.success("Invoice loaded for editing");
     } catch (error) {
       console.error("Error setting up edit:", error);
       toast.error("Error loading invoice for editing");
     }
   };
 
+
+
+  const handleEditItem = (index, item) => {
+    // Set editing index
+    setEditingItemIndex(index);
+
+    // Populate form fields with item data
+    setItemId(item.itemId);
+    setDescription(item.description);
+    setQuantity(item.quantity.toString());
+    setUnitPrice(item.unitPrice.toString());
+    setVatRegime(item.vatRegime);
+    setVatRate((item.vatRate * 100).toString()); // Convert back to percentage
+
+    // Auto-calculate will handle the totals
+
+    toast.success("Item loaded for editing. Click 'Update Item' to save changes.");
+  };
+
+  // Update handleAddItem to handle both add and update
+  const handleAddItem = () => {
+    if (!itemId || !quantity || !unitPrice) {
+      toast.error("Please fill all item fields");
+      return;
+    }
+
+    const selectedItem = itemsList.find(item => item._id === itemId);
+
+    const newItem = {
+      itemId,
+      description: description || selectedItem?.itemName || "Item",
+      quantity: Number(quantity),
+      unitPrice: Number(unitPrice),
+      vatRegime: vatRegime,
+      vatRate: Number(vatRate) / 100,
+      totalExclVAT,
+      vatAmount,
+      totalInclVAT,
+    };
+
+    if (editingItemIndex !== null) {
+      // Update existing item
+      const updatedItems = [...invoiceItems];
+      updatedItems[editingItemIndex] = newItem;
+      setInvoiceItems(updatedItems);
+      setEditingItemIndex(null);
+      toast.success("Item updated successfully!");
+    } else {
+      // Add new item
+      setInvoiceItems([...invoiceItems, newItem]);
+      toast.success("Item added successfully!");
+    }
+
+    // Reset fields
+    resetItemForm();
+  };
+
+  // Reset item form function
+  const resetItemForm = () => {
+    setItemId("");
+    setDescription("");
+    setQuantity("");
+    setUnitPrice("");
+    setVatRate("");
+    setTotalExclVAT(0);
+    setVatAmount(0);
+    setTotalInclVAT(0);
+    setEditingItemIndex(null);
+  };
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!isAddOpen) {
+      // Reset all form states
+      setInvoiceItems([]);
+      setSelectedCustomer("");
+      setCustomerVAT("");
+      setVatRegime("");
+      setStatus("Draft");
+      resetItemForm(); // Use the new reset function
+      setIsEditMode(false);
+      setEditingInvoiceId(null);
+      setInvoiceDate(new Date().toISOString().split("T")[0]);
+    }
+  }, [isAddOpen]);
+
+  // Update the Add Item button text dynamically
+  const getAddButtonText = () => {
+    return editingItemIndex !== null ? "Update Item" : "Add Item";
+  };
   // Handle Update Invoice
   const handleUpdateInvoice = async () => {
     if (!selectedCustomer) {
@@ -474,6 +544,12 @@ const Invoice = () => {
         }))
       };
 
+      // Remove invoiceNo from payload for drafts
+      // Only include it if status is "Final" AND you have a valid invoice number
+      if (status === "Final" && invoiceNo && invoiceNo !== "INV-DRAFT") {
+        payload.invoiceNo = invoiceNo;
+      }
+
       console.log("Sending payload:", payload);
 
       let response;
@@ -486,7 +562,7 @@ const Invoice = () => {
           },
         });
       } else {
-        // Create new invoice
+        // Create new invoice - don't send invoiceNo for drafts
         response = await api.post("/inventory/invoice/draft", payload, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -811,9 +887,10 @@ const Invoice = () => {
                     <div className="space-y-2">
                       <Label>Invoice No</Label>
                       <Input
-                        value={status === "Final" ? invoiceNo : "INV-DRAFT"}
+                        value={status === "Final" ? invoiceNo : "Auto-generated when finalized"}
                         readOnly
                         className="border-2 bg-gray-100 cursor-not-allowed"
+                        placeholder={status === "Draft" ? "Will be generated when finalized" : "Enter invoice number"}
                       />
                     </div>
                     <div className="space-y-2">
@@ -968,7 +1045,7 @@ const Invoice = () => {
                             <SelectItem value="Exemption">
                               Exemption (0%)
                             </SelectItem>
-                            <SelectItem value="Local VAT">Local VAT</SelectItem>
+                            <SelectItem value="Local">Local VAT</SelectItem>
                             <SelectItem value="Margin">Margin</SelectItem>
                             <SelectItem value="Non-local Individual">
                               Non-local Individual (Customer VAT)
@@ -1023,11 +1100,12 @@ const Invoice = () => {
                     </div>
 
                     {/* Add Item */}
+                    {/* Add Item Button */}
                     <Button
                       onClick={handleAddItem}
                       className="mt-4 w-full bg-primary text-white"
                     >
-                      Add Item
+                      {getAddButtonText()}
                     </Button>
 
                     {/* ITEMS LIST */}
@@ -1042,6 +1120,7 @@ const Invoice = () => {
                               <th className="p-2 text-left">Price</th>
                               <th className="p-2 text-left">VAT Rate</th>
                               <th className="p-2 text-left">Total</th>
+
                               <th className="p-2 text-left">Actions</th>
                             </tr>
                           </thead>
@@ -1056,14 +1135,29 @@ const Invoice = () => {
                                   <td className="p-2">{(it.vatRate * 100)}%</td>
                                   <td className="p-2 font-semibold">€{it.totalInclVAT?.toFixed(2)}</td>
                                   <td className="p-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleRemoveItem(i)}
-                                      className="h-6 w-6 p-0 text-red-600 hover:text-red-800"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
+                                    <div className="flex gap-1">
+                                      {/* Edit Button */}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleEditItem(i, it)}
+                                        className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+                                        title="Edit Item"
+                                      >
+                                        <Edit className="w-3 h-3" />
+                                      </Button>
+
+                                      {/* Delete Button */}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleRemoveItem(i)}
+                                        className="h-6 w-6 p-0 text-red-600 hover:text-red-800"
+                                        title="Delete Item"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -1270,6 +1364,9 @@ const Invoice = () => {
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                       Total (Incl. VAT)
                     </th>
+                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                      Status
+                    </th>
                     <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-wider">
                       Actions
                     </th>
@@ -1315,24 +1412,35 @@ const Invoice = () => {
                         <td className="px-6 py-4 font-semibold">
                           €{item.totalInclVAT?.toLocaleString()}
                         </td>
+                        <td className="px-6 py-4 font-normal text-sm text-center">
+                           <div 
+                              className={`px-2 py-1 rounded-full ${
+                                item.status === "Final"
+                                  ? "bg-green-200 text-green-700"
+                                  : "bg-orange-300 text-white"
+                              }`}
+                            >
+                              {item?.status}
+                            </div>
+                        </td>
 
                         <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
                           <div className="flex items-center justify-center gap-1">
+                            {/* 👁 View - Show for all */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                              title="View"
+                              onClick={() => handleView(item.invoiceNo)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+
                             {/* Show different actions based on tab */}
                             {activeTab === "draft" && (
                               <>
-                                {/* 👁 View */}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                                  title="View"
-                                  onClick={() => handleView(item.invoiceNo)}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-
-                                {/* ✏️ Edit */}
+                                {/* ✏️ Edit - Only for drafts */}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1343,44 +1451,13 @@ const Invoice = () => {
                                   <Edit className="w-4 h-4" />
                                 </Button>
 
-                                {/* ✅ Finalize */}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
-                                  title="Finalize"
-                                  onClick={() => handleFinalizeInvoice(item._id)}
-                                >
-                                  <FileSignature className="w-4 h-4" />
-                                </Button>
 
-                                {/* 🗑 Delete */}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                                  title="Delete"
-                                  onClick={() => handleDeleteInvoice(item._id)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
                               </>
                             )}
 
                             {activeTab === "final" && (
                               <>
-                                {/* 👁 View */}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                                  title="View"
-                                  onClick={() => handleView(item.invoiceNo)}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-
-                                {/* ✉️ Share Dropdown */}
+                                {/* ✉️ Share Dropdown - Only for finals */}
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button
@@ -1399,18 +1476,14 @@ const Invoice = () => {
                                   <DropdownMenuContent align="end" className="w-40">
                                     <DropdownMenuItem
                                       className="flex items-center gap-2 cursor-pointer"
-                                      onClick={() =>
-                                        handleSendOption("whatsapp", item)
-                                      }
+                                      onClick={() => handleSendOption("whatsapp", item)}
                                     >
                                       <MessageCircle className="w-4 h-4 text-green-600" />
                                       <span>WhatsApp</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="flex items-center gap-2 cursor-pointer"
-                                      onClick={() =>
-                                        handleSendOption("email", item)
-                                      }
+                                      onClick={() => handleSendOption("email", item)}
                                     >
                                       <Mail className="w-4 h-4 text-blue-600" />
                                       <span>Email</span>
@@ -1418,7 +1491,7 @@ const Invoice = () => {
                                   </DropdownMenuContent>
                                 </DropdownMenu>
 
-                                {/* 📥 Download */}
+                                {/* 📥 Download - Only for finals */}
                                 <Button
                                   onClick={() => handleDownload(item)}
                                   variant="ghost"
@@ -1433,21 +1506,10 @@ const Invoice = () => {
 
                             {activeTab === "all" && (
                               <>
-                                {/* 👁 View */}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                                  title="View"
-                                  onClick={() => handleView(item.invoiceNo)}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-
-                                {/* Conditional actions based on status */}
-                                {item.status === 'draft' && (
+                                {/* Conditional actions based on status for "all" tab */}
+                                {item.status === 'Draft' && (
                                   <>
-                                    {/* ✏️ Edit */}
+                                    {/* ✏️ Edit - Only for drafts */}
                                     <Button
                                       variant="ghost"
                                       size="sm"
@@ -1458,44 +1520,71 @@ const Invoice = () => {
                                       <Edit className="w-4 h-4" />
                                     </Button>
 
-                                    {/* ✅ Finalize */}
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
-                                      title="Finalize"
-                                      onClick={() => handleFinalizeInvoice(item._id)}
-                                    >
-                                      <FileSignature className="w-4 h-4" />
-                                    </Button>
+
                                   </>
                                 )}
 
-                                {/* 🗑 Delete (only for drafts) */}
-                                {item.status === 'draft' && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                                    title="Delete"
-                                    onClick={() => handleDeleteInvoice(item._id)}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                )}
+                                {item.status === 'Final' && (
+                                  <>
+                                    {/* ✉️ Share Dropdown - Only for finals */}
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                          title="Share"
+                                        >
+                                          {sendingEmail ? (
+                                            <Loader className="w-4 h-4 text-primary animate-spin" />
+                                          ) : (
+                                            <Send className="w-4 h-4" />
+                                          )}
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-40">
+                                        <DropdownMenuItem
+                                          className="flex items-center gap-2 cursor-pointer"
+                                          onClick={() => handleSendOption("whatsapp", item)}
+                                        >
+                                          <MessageCircle className="w-4 h-4 text-green-600" />
+                                          <span>WhatsApp</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="flex items-center gap-2 cursor-pointer"
+                                          onClick={() => handleSendOption("email", item)}
+                                        >
+                                          <Mail className="w-4 h-4 text-blue-600" />
+                                          <span>Email</span>
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
 
-                                {/* 📥 Download */}
-                                <Button
-                                  onClick={() => handleDownload(item)}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                                  title="Download"
-                                >
-                                  <DownloadIcon className="w-4 h-4" />
-                                </Button>
+                                    {/* 📥 Download - Only for finals */}
+                                    <Button
+                                      onClick={() => handleDownload(item)}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                      title="Download"
+                                    >
+                                      <DownloadIcon className="w-4 h-4" />
+                                    </Button>
+                                  </>
+                                )}
                               </>
                             )}
+
+                            {/* 🗑 Delete - Show for BOTH drafts and finals */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                              title="Delete"
+                              onClick={() => handleDeleteInvoice(item._id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
                         </td>
                       </tr>

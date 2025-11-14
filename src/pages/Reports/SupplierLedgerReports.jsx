@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, FileText, Table } from "lucide-react";
+import { Download, FileText, Table, Loader } from "lucide-react";
 import { toast } from "sonner";
+import api from "../../Api/AxiosInstance"
 import {
   Select,
   SelectTrigger,
@@ -44,13 +45,101 @@ const reportData = [
 const SupplierLedgerReports = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-
+  const [suppliers, setSuppliers] = useState([]);
+  const [supplierLoading, setSupplierLoading] = useState(false);
+  const [ledgerData, setLedgerData] = useState([]);         // Store ledger data
+  const [ledgerLoading, setLedgerLoading] = useState(false); // Loading state
+  const [selectedSupplier, setSelectedSupplier] = useState(""); // Optional for filtering
   const handleExportPDF = () => {
     toast.success("Exporting report as PDF...");
   };
 
   const handleExportExcel = () => {
     toast.success("Exporting report as Excel...");
+  };
+
+  // Fetch Suppliers
+  const fetchSuppliers = async () => {
+    try {
+      setSupplierLoading(true);
+      const res = await api.get("/suppliers");
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setSuppliers(res.data.data);
+      } else {
+        toast.error("Invalid supplier response");
+      }
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+      toast.error("Error fetching suppliers");
+    } finally {
+      setSupplierLoading(false);
+    }
+  };
+
+  // Supplier list fetch on component mount
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+
+  // Table data fetch for suppliers
+  const fetchLedgerReport = async (supplierId = "", start = "", end = "") => {
+    try {
+      setLedgerLoading(true);
+
+      let query = [];
+      if (start) query.push(`dateFrom=${start}`);
+      if (end) query.push(`dateTo=${end}`);
+      const queryString = query.length ? `?${query.join("&")}` : "";
+
+      const url = supplierId
+        ? `/reports/ledger/supplier/${supplierId}${queryString}`
+        : `/reports/ledger/supplier${queryString}`;
+
+      const res = await api.get(url);
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setLedgerData(res.data.data);
+      } else {
+        toast.error("Invalid ledger response");
+        setLedgerData([]);
+      }
+    } catch (error) {
+      console.error("Error fetching ledger:", error);
+      toast.error("Error fetching ledger report");
+      setLedgerData([]);
+    } finally {
+      // keep loader for 1.5 seconds
+      setTimeout(() => {
+        setLedgerLoading(false);
+      }, 1500);
+    }
+  };
+
+  // Fetch supplier ledger on component mount
+  useEffect(() => {
+    fetchLedgerReport(); // no params
+  }, []);
+
+  useEffect(() => {
+    if (selectedSupplier) {
+      fetchLedgerReport(selectedSupplier, startDate, endDate);
+    }
+  }, [selectedSupplier]);
+
+  // Loader
+  const TableLoader = ({ message = "Loading..." }) => {
+    return (
+      <tr>
+        <td colSpan="9" className="py-20 text-center">
+          <div className="flex flex-col items-center justify-center">
+            <Loader className="w-10 h-10 text-primary animate-spin mb-2" />
+            <p className="text-sm text-muted-foreground font-medium">
+              {message}
+            </p>
+          </div>
+        </td>
+      </tr>
+    );
   };
 
   return (
@@ -86,31 +175,36 @@ const SupplierLedgerReports = () => {
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
-            {/*  */}
+              {/*  */}
 
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label>Supplier</Label>
                 <Select onValueChange={(v) => setSelectedSupplier(v)}>
                   <SelectTrigger className="border-2">
-                    <SelectValue placeholder="Select supplier" />
+                    {supplierLoading ? (
+                      <div className="flex items-center justify-center w-full py-1">
+                        <Loader className="w-5 h-5 animate-spin text-primary" />
+                      </div>
+                    ) : (
+                      <SelectValue placeholder="Select supplier" />
+                    )}
                   </SelectTrigger>
 
                   <SelectContent>
-                    <SelectItem value="supplier001">ABC Traders</SelectItem>
-                    <SelectItem value="supplier002">
-                      Global Suppliers
-                    </SelectItem>
-                    <SelectItem value="supplier003">
-                      Premium Goods Ltd
-                    </SelectItem>
+                    {suppliers.map((sup) => (
+                      <SelectItem key={sup._id} value={sup._id}>
+                        {sup.supplierName}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+
             </div>
           </CardContent>
         </Card>
 
-        
+
 
         {/* Report Table */}
         <Card>
@@ -132,57 +226,60 @@ const SupplierLedgerReports = () => {
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">
-                      Customer
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">
-                      Invoice
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">
-                      Total
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">
-                      Profit
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">
-                      VAT
-                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Sr</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Purchase No.</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Supplier Name</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Debit</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Credit</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Balance</th>
                   </tr>
                 </thead>
+
                 <tbody className="divide-y">
-                  {reportData.map((row, i) => (
-                    <tr key={i} className="hover:bg-muted/30">
-                      <td className="px-4 py-3 text-sm">{row.date}</td>
-                      <td className="px-4 py-3">{row.customer}</td>
-                      <td className="px-4 py-3 font-mono text-sm">
-                        {row.invoice}
-                      </td>
-                      <td className="px-4 py-3 font-medium">
-                        PKR {row.total.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-success">
-                        PKR {row.profit.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        PKR {row.vat.toLocaleString()}
-                      </td>
+                  {ledgerLoading ? (
+                    <TableLoader message="Loading ledger data..." />
+                  ) : ledgerData.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="text-center py-4">No data found</td>
                     </tr>
-                  ))}
+                  ) : (
+                    ledgerData.map((row, i) => (
+                      <tr key={row._id} className="hover:bg-muted/30">
+                        <td className="px-4 py-3">{i + 1}</td>
+                        <td className="px-4 py-3">{new Date(row.date).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 font-mono text-sm">
+                          {row.purchaseId?.purchaseNo ?? "-"}
+                        </td>
+                        <td className="px-4 py-3">{row.supplierId?.supplierName ?? "-"}</td>
+                        <td className="px-4 py-3">{row.description ?? "-"}</td>
+                        <td className="px-4 py-3">{row.entryType ?? "-"}</td>
+                        <td className="px-4 py-3">€ {(row.debit ?? 0).toLocaleString()}</td>
+                        <td className="px-4 py-3">€ {(row.credit ?? 0).toLocaleString()}</td>
+                        <td className="px-4 py-3">€ {(row.balance ?? 0).toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
+
                 <tfoot className="bg-muted/30 font-semibold">
                   <tr>
-                    <td colSpan={3} className="px-4 py-3 text-right">
-                      Total:
+                    <td colSpan={6} className="px-4 py-3 text-right">Total:</td>
+                    <td className="px-4 py-3">
+                      € {ledgerData.reduce((sum, r) => sum + (r.debit ?? 0), 0).toLocaleString()}
                     </td>
-                    <td className="px-4 py-3">PKR 75,000</td>
-                    <td className="px-4 py-3">PKR 13,500</td>
-                    <td className="px-4 py-3">PKR 12,750</td>
+                    <td className="px-4 py-3">
+                      € {ledgerData.reduce((sum, r) => sum + (r.credit ?? 0), 0).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      € {ledgerData.reduce((sum, r) => sum + (r.balance ?? 0), 0).toLocaleString()}
+                    </td>
                   </tr>
                 </tfoot>
               </table>
+
             </div>
           </CardContent>
         </Card>
