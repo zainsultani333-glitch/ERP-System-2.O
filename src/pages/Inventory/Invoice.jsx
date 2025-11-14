@@ -456,7 +456,7 @@ const Invoice = () => {
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
                     <FileSignature className="w-5 h-5 text-primary" />
-                    Add New Invoice
+                    Add New Purchase Invoices
                   </DialogTitle>
                 </DialogHeader>
 

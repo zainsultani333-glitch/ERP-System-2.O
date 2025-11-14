@@ -81,7 +81,7 @@ const navigation = [
   // SALES MODULE
   // -------------------------------
   {
-    name: "Sales",
+    name: "Purchase Invoices",
     href: "/sales",
     icon: ShoppingCart,
     subNav: [
@@ -108,7 +108,7 @@ const navigation = [
   // -------------------------------
   // OTHER MODULES
   // -------------------------------
-   { name: "Sales", href: "/sales-managment", icon: ShoppingCart },
+  //  { name: "Sales", href: "/sales-managment", icon: ShoppingCart },
   { name: "User Management", href: "/user-manegement", icon: User },
   { name: "Consignment", href: "/consignment", icon: Truck },
   { name: "Barcode", href: "/barcode", icon: Barcode },

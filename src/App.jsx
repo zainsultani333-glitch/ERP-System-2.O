@@ -31,7 +31,7 @@ import CreateCompanyForm from "./pages/CompanyManagement/CreateCompanyForm";
 import RoleAccessSettings from "./pages/CompanyManagement/RoleAccessSettings";
 import Invoice from "./pages/Inventory/Invoice";
 import ProtectedRoute from "./context/ProtectedRoute";
-
+import PurchaseInvoices from "./pages/PurchaseInvoices";      
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -73,7 +73,7 @@ const App = () => (
             path="/sales/transaction-traking"
             element={<TransactionTracking />}
           />
-
+          <Route path="purchase-invoices" element={<PurchaseInvoices />} />
           {/* SETUP MODULE ROUTES */}
           <Route
             path="/setup/customer-defination"
