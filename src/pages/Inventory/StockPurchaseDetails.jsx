@@ -43,6 +43,19 @@ import StockViewModal from "./Models/StockViewModal";
 import Pagination from "../../components/Pagination";
 
 const StockPurchaseDetails = () => {
+  const [purchaseNo, setPurchaseNo] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [supplier, setSupplier] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [itemId, setItemId] = useState("");
+  const [description, setDescription] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [unitCost, setUnitCost] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [purchaseItems, setPurchaseItems] = useState([]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [summary, setSummary] = useState({
     totalItems: 0,
@@ -50,7 +63,7 @@ const StockPurchaseDetails = () => {
     lowStockItems: 0,
     storesInConsignment: 0,
   });
-  const [itemNames, setItemNames] = useState([]);
+  // const [itemNames, setItemNames] = useState([]);
   const [itemNameLoading, setItemNameLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState("");
   const [warehouses, setWarehouses] = useState([]);
@@ -71,8 +84,40 @@ const StockPurchaseDetails = () => {
   const [minStockLevel, setMinStockLevel] = useState("");
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
+  const itemNames = [
+    { id: "1", name: "Good Lotion" },
+    { id: "2", name: "Face Cream" },
+    { id: "3", name: "Body Spray" },
+    { id: "4", name: "Shampoo" },
+    { id: "5", name: "Hair Oil" },
+  ];
 
   const { token } = useAuth();
+  const handleAddPurchaseItem = () => {
+    if (!itemId || !quantity || !unitCost) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    const selectedItemName = itemNames.find((x) => x.id === itemId)?.name;
+
+    const newItem = {
+      itemId,
+      itemName: selectedItemName,
+      description,
+      quantity: Number(quantity),
+      unitCost: Number(unitCost),
+      barcode,
+    };
+
+    setPurchaseItems([...purchaseItems, newItem]);
+
+    setItemId("");
+    setDescription("");
+    setQuantity("");
+    setUnitCost("");
+    setBarcode("");
+  };
 
   // Fetch stock data
   const fetchStock = async () => {
@@ -101,22 +146,22 @@ const StockPurchaseDetails = () => {
   // fetch item name
   // console.log(stockData, "data");
 
-  const fetchItemNames = async () => {
-    try {
-      setItemNameLoading(true);
-      const res = await api.get("/inventory/items/name");
-      if (res.data.success) {
-        setItemNames(res.data.data);
-      } else {
-        toast.error("Failed to fetch item names");
-      }
-    } catch (error) {
-      console.error("Error fetching item names:", error);
-      toast.error("Error fetching item names");
-    } finally {
-      setTimeout(() => setItemNameLoading(false), 500);
-    }
-  };
+  // const fetchItemNames = async () => {
+  //   try {
+  //     setItemNameLoading(true);
+  //     const res = await api.get("/inventory/items/name");
+  //     if (res.data.success) {
+  //       setItemNames(res.data.data);
+  //     } else {
+  //       toast.error("Failed to fetch item names");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching item names:", error);
+  //     toast.error("Error fetching item names");
+  //   } finally {
+  //     setTimeout(() => setItemNameLoading(false), 500);
+  //   }
+  // };
 
   const fetchWarehouses = async () => {
     try {
@@ -142,9 +187,9 @@ const StockPurchaseDetails = () => {
   }, [isAddOpen]);
 
   // item name useeffect call first time
-  useEffect(() => {
-    fetchItemNames();
-  }, []);
+  // useEffect(() => {
+  //   fetchItemNames();
+  // }, []);
 
   const filteredStock = stockData.filter(
     (item) =>
@@ -192,7 +237,7 @@ const StockPurchaseDetails = () => {
     toast.success("Stock & purchase report downloaded!");
   };
 
-  const handleSaveStock = async () => {
+  const handleSavePurchase = async () => {
     try {
       setSaving(true);
 
@@ -234,13 +279,31 @@ const StockPurchaseDetails = () => {
         return;
       }
 
+      // const payload = {
+      //   openingStock: Number(openingStock),
+      //   purchaseRate: Number(purchaseRate),
+      //   sellingPrice: Number(sellingPrice),
+      //   wholesalePrice: Number(wholesalePrice),
+      //   warehouseId: warehouse._id,
+      //   minStockLevel: Number(minStockLevel),
+      // };
       const payload = {
-        openingStock: Number(openingStock),
-        purchaseRate: Number(purchaseRate),
-        sellingPrice: Number(sellingPrice),
-        wholesalePrice: Number(wholesalePrice),
-        warehouseId: warehouse._id,
-        minStockLevel: Number(minStockLevel),
+        purchaseNo,
+        purchaseDate,
+        supplier,
+        warehouse: warehouse._id,
+        trackingNumber,
+        items: purchaseItems,
+
+        netTotal: purchaseItems.reduce(
+          (sum, i) => sum + i.quantity * i.unitCost,
+          0
+        ),
+        vatTotal: 0,
+        grandTotal: purchaseItems.reduce(
+          (sum, i) => sum + i.quantity * i.unitCost,
+          0
+        ),
       };
 
       // 🧩 Single unified API call
@@ -353,6 +416,25 @@ const StockPurchaseDetails = () => {
     return "healthy";
   };
 
+  const handleRemoveItem = (index) => {
+    setPurchaseItems(purchaseItems.filter((_, i) => i !== index));
+  };
+
+  const totalQty = purchaseItems.reduce(
+    (sum, item) => sum + Number(item.quantity),
+    0
+  );
+
+  const totalUnitCost = purchaseItems.reduce(
+    (sum, item) => sum + Number(item.unitCost),
+    0
+  );
+
+  const totalAmount = purchaseItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitCost,
+    0
+  );
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -412,179 +494,242 @@ const StockPurchaseDetails = () => {
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 pt-4">
-                  {/* Item Code & Name */}
+                  {/* Purchase No & Date */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-foreground">
-                        Item Name
-                      </Label>
+                      <Label>Purchase No</Label>
+                      <Input
+                        value={purchaseNo}
+                        onChange={(e) => setPurchaseNo(e.target.value)}
+                        placeholder="PUR-001"
+                        className="border-2"
+                      />
+                    </div>
 
-                      {itemNameLoading ? (
-                        <div className="flex justify-center items-center h-12 border rounded-lg bg-muted/30">
-                          <Loader className="w-5 h-5 text-primary animate-spin mr-2" />
-                        </div>
-                      ) : isEditMode ? (
-                        // 🧩 In edit mode, show item name as a readonly input
-                        <Input
-                          value={selectedItem}
-                          readOnly
-                          className="border-2 bg-muted/50 text-foreground "
-                        />
-                      ) : (
-                        // 🧩 In add mode, show dropdown select
-                        <Select
-                          value={selectedItem}
-                          onValueChange={setSelectedItem}
-                        >
-                          <SelectTrigger className="bg-muted/50 border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
-                            <SelectValue placeholder="Select Item" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {itemNames.length > 0 ? (
-                              itemNames.map((item) => (
-                                <SelectItem
-                                  key={item._id}
-                                  value={item.itemName}
-                                  className="hover:bg-blue-600 hover:text-white transition-colors"
-                                >
-                                  {item.itemName}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-data" disabled>
-                                No items found
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      )}
+                    <div className="space-y-2">
+                      <Label>Purchase Date</Label>
+                      <Input
+                        type="date"
+                        value={purchaseDate}
+                        onChange={(e) => setPurchaseDate(e.target.value)}
+                        className="border-2"
+                      />
                     </div>
                   </div>
 
-                  {/* Opening Stock */}
+                  {/* Supplier & Warehouse */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Package className="w-4 h-4" />
-                        Opening Stock Quantity
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={openingStock}
-                        onChange={(e) => setOpeningStock(e.target.value)}
-                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-                      />
+                      <Label>Supplier</Label>
+                      <Select value={supplier} onValueChange={setSupplier}>
+                        <SelectTrigger className="border-2">
+                          <SelectValue placeholder="Select Supplier" />
+                        </SelectTrigger>
+
+                        <SelectContent>
+                          {/* {supplierList?.map((s) => (
+                            <SelectItem key={s._id} value={s._id}>
+                              {s.supplierName}
+                            </SelectItem>
+                          ))} */}
+                        </SelectContent>
+                      </Select>
                     </div>
+
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Warehouse className="w-4 h-4" />
-                        Stores in Consignment
-                      </Label>
-                      {warehouseLoading ? (
-                        <div className="flex justify-center items-center h-12 border rounded-lg bg-muted/30">
-                          <Loader className="w-5 h-5 text-primary animate-spin mr-2" />
-                        </div>
-                      ) : (
-                        <Select
-                          value={selectedWarehouse}
-                          onValueChange={setSelectedWarehouse}
-                        >
-                          <SelectTrigger className="bg-muted/50 border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
-                            <SelectValue placeholder="Select stock location" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {warehouses.length > 0 ? (
-                              warehouses.map((wh) => (
-                                <SelectItem
-                                  key={wh._id}
-                                  value={wh.warehouseName}
-                                  className="hover:bg-blue-600 hover:text-white transition-colors"
-                                >
-                                  {wh.warehouseName}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-data" disabled>
-                                No warehouses found
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      )}
+                      <Label>Warehouse</Label>
+                      <Select
+                        value={selectedWarehouse}
+                        onValueChange={setSelectedWarehouse}
+                      >
+                        <SelectTrigger className="border-2">
+                          <SelectValue placeholder="Select Warehouse" />
+                        </SelectTrigger>
+
+                        <SelectContent>
+                          {warehouses?.map((wh) => (
+                            <SelectItem key={wh._id} value={wh._id}>
+                              {wh.warehouseName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
-                  {/* Pricing */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-foreground">
-                        Purchase Rate (excl. VAT)
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={purchaseRate}
-                        onChange={(e) => setPurchaseRate(e.target.value)}
-                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-foreground">
-                        Selling / Retail Price
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={sellingPrice}
-                        onChange={(e) => setSellingPrice(e.target.value)}
-                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-foreground">
-                        Wholesale Price (Optional)
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={wholesalePrice}
-                        onChange={(e) => setWholesalePrice(e.target.value)}
-                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Min Stock Level */}
+                  {/* Tracking Number */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4" />
-                      Minimum Stock Level (Alert Trigger)
-                    </Label>
+                    <Label>Tracking Number</Label>
                     <Input
-                      type="number"
-                      placeholder="0"
-                      value={minStockLevel}
-                      onChange={(e) => setMinStockLevel(e.target.value)}
-                      className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                      value={trackingNumber}
+                      onChange={(e) => setTrackingNumber(e.target.value)}
+                      placeholder="TRK-99221-PK"
+                      className="border-2"
                     />
                   </div>
 
-                  <Button
-                    className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium flex items-center justify-center"
-                    onClick={handleSaveStock}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <div className="flex items-center justify-center">
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                        {isEditMode ? "Updating..." : "Saving..."}
+                  {/* ITEM SECTION */}
+                  <div className="mt-6 p-4 rounded-lg border bg-muted/30">
+                    <h3 className="font-semibold mb-3">Add Item</h3>
+
+                    {/* Item + Description (same line) */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Item Select */}
+                      <div className="space-y-2">
+                        <Label>Item</Label>
+                        <Select value={itemId} onValueChange={setItemId}>
+                          <SelectTrigger className="border-2">
+                            <SelectValue placeholder="Select Item" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            {itemNames.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    ) : isEditMode ? (
-                      "Update Stock"
-                    ) : (
-                      "Save Stock Details"
+
+                      {/* Description */}
+                      <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Input
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="Good Lotion"
+                          className="border-2"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quantity - Unit Cost - Barcode */}
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      {/* Qty */}
+                      <div className="space-y-2">
+                        <Label>Quantity</Label>
+                        <Input
+                          type="number"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                          className="border-2"
+                        />
+                      </div>
+
+                      {/* Unit Cost */}
+                      <div className="space-y-2">
+                        <Label>Unit Cost</Label>
+                        <Input
+                          type="number"
+                          value={unitCost}
+                          onChange={(e) => setUnitCost(e.target.value)}
+                          placeholder="500"
+                          className="border-2"
+                        />
+                      </div>
+
+                      {/* Barcode */}
+                      <div className="space-y-2">
+                        <Label>Barcode</Label>
+                        <Input
+                          value={barcode}
+                          onChange={(e) => setBarcode(e.target.value)}
+                          placeholder="BRC-POND-001"
+                          className="border-2"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Add Item Button */}
+                    <Button
+                      onClick={handleAddPurchaseItem}
+                      className="mt-4 w-full bg-primary text-white"
+                    >
+                      Add Item
+                    </Button>
+
+                    {/* Display Added Items */}
+                    {purchaseItems.length > 0 && (
+                      <div className="mt-4 border rounded-lg p-3 bg-white">
+                        <h4 className="font-semibold mb-3">Added Items</h4>
+                        <table className="w-full border">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th className="p-2 text-left">Item</th>
+                              <th className="p-2 text-left">Qty</th>
+                              <th className="p-2 text-left">Unit Cost</th>
+                              <th className="p-2 text-left">Total</th>
+                              <th className="p-2 text-end">Remove</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {purchaseItems.map((it, i) => (
+                              <tr key={i} className="border-t">
+                                <td className="p-2">{it.itemName}</td>
+                                <td className="p-2">{it.quantity}</td>
+                                <td className="p-2">€{it.unitCost}</td>
+                                <td className="p-2 font-semibold">
+                                  €{it.quantity * it.unitCost}
+                                </td>
+                                <td className="p-2">
+                                  <button
+                                    onClick={() => handleRemoveItem(i)}
+                                    className="text-red-600 inline-flex justify-center w-full hover:text-red-800"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>                 
+                      </div>
                     )}
+                    {purchaseItems.length>0 &&(
+                      <>
+                        {/* Totals Summary Box */}
+                        <div className="mt-4 w-full flex justify-end">
+                          <div className="p-4  w-64">
+                            <h4 className="font-semibold mb-3 text-gray-700">
+                              Summary
+                            </h4>
+
+                            <div className="flex justify-between mb-2">
+                              <span className="text-gray-600">Total Qty:</span>
+                              <span className="font-semibold">{totalQty}</span>
+                            </div>
+
+                            <div className="flex justify-between mb-2">
+                              <span className="text-gray-600">
+                                Total Unit Cost:
+                              </span>
+                              <span className="font-semibold">
+                                €{totalUnitCost}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between border-t pt-2">
+                              <span className="text-gray-600">
+                                Grand Total:
+                              </span>
+                              <span className="font-bold text-primary">
+                                €{totalAmount}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        </>
+                    )}
+                  </div>
+
+                  {/* SAVE BUTTON */}
+                  <Button
+                    className="w-full bg-gradient-to-r from-primary to-primary/90 py-3 text-base font-medium"
+                    onClick={handleSavePurchase}
+                  >
+                    Save Purchase
                   </Button>
                 </div>
               </DialogContent>
