@@ -43,6 +43,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
+
 const parentMap = {
   "/setup": "Setup",
   "/inventory": "Inventory",
@@ -53,10 +54,6 @@ const parentMap = {
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-
-  // -------------------------------
-  // INVENTORY MODULE
-  // -------------------------------
   {
     name: "Inventory",
     href: "/inventory",
@@ -75,10 +72,6 @@ const navigation = [
       },
     ],
   },
-
-  // -------------------------------
-  // SALES MODULE
-  // -------------------------------
   {
     name: "Sales",
     href: "/sales",
@@ -97,10 +90,6 @@ const navigation = [
       },
     ],
   },
-
-  // -------------------------------
-  // SETUP MODULE (MASTER DATA)
-  // -------------------------------
   {
     name: "Setup",
     href: "/setup",
@@ -120,10 +109,6 @@ const navigation = [
       { name: "Category", href: "/setup/category-fields", icon: Tag },
     ],
   },
-
-  // -------------------------------
-  // COMPANY MANAGEMENT (UNCHANGED)
-  // -------------------------------
   {
     name: "Company Management",
     href: "/company-management",
@@ -146,10 +131,6 @@ const navigation = [
       },
     ],
   },
-
-  // -------------------------------
-  // OTHER MODULES
-  // -------------------------------
   { name: "User Management", href: "/user-manegement", icon: User },
   { name: "Barcode", href: "/barcode", icon: Barcode },
   { name: "Communication", href: "/communication", icon: MessageSquare },
@@ -177,14 +158,12 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openSubNav, setOpenSubNav] = useState({});
-  const { logout } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { logout, token } = useAuth();
 
   const selectedCompany = JSON.parse(
     localStorage.getItem("selectedCompany") || "{}"
-  );
-  const isInventoryActive = location.pathname.startsWith("/inventory");
-  const isCompanyManagementActive = location.pathname.startsWith(
-    "/company-management"
   );
 
   useEffect(() => {
@@ -201,10 +180,117 @@ const DashboardLayout = ({ children }) => {
     }
   }, [location.pathname]);
 
+  // Fetch notifications
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Set up polling for new notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    
+    return () => clearInterval(interval);
+  }, [token]);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/notifications', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setNotifications(data.data);
+          // Count unread notifications
+          const unread = data.data.filter(notification => !notification.isRead).length;
+          setUnreadCount(unread);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const markAsRead = async (notificationId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Update local state
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif._id === notificationId ? { ...notif, isRead: true } : notif
+          )
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/notifications/mark-all-read', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Update local state
+        setNotifications(prev => 
+          prev.map(notif => ({ ...notif, isRead: true }))
+        );
+        setUnreadCount(0);
+        toast.success("All notifications marked as read");
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     toast.success("Logged out successfully");
     navigate("/login");
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return `${Math.floor(diffInHours * 60)}m ago`;
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'Purchase':
+        return <ShoppingBag className="w-4 h-4" />;
+      case 'Sale':
+        return <ShoppingCart className="w-4 h-4" />;
+      case 'Inventory':
+        return <Package className="w-4 h-4" />;
+      default:
+        return <Bell className="w-4 h-4" />;
+    }
   };
 
   return (
@@ -244,15 +330,83 @@ const DashboardLayout = ({ children }) => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="w-5 h-5" />
-                  <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs">
-                    3
-                  </Badge>
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-red-500 text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Badge>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  <span>Notifications</span>
+                  {unreadCount > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-auto p-0 text-xs text-blue-600 hover:text-blue-700"
+                      onClick={markAllAsRead}
+                    >
+                      Mark all as read
+                    </Button>
+                  )}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {/* Add items later */}
+                
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No notifications
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {notifications.map((notification) => (
+                      <DropdownMenuItem
+                        key={notification._id}
+                        className={cn(
+                          "flex flex-col items-start p-3 cursor-pointer border-l-2",
+                          notification.isRead 
+                            ? "border-l-transparent bg-transparent" 
+                            : "border-l-blue-500 bg-blue-50"
+                        )}
+                        onClick={() => markAsRead(notification._id)}
+                      >
+                        <div className="flex items-start gap-3 w-full">
+                          <div className={cn(
+                            "p-1 rounded-full mt-0.5",
+                            notification.isRead ? "text-gray-400" : "text-blue-600"
+                          )}>
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              "text-sm font-medium truncate",
+                              notification.isRead ? "text-gray-600" : "text-gray-900"
+                            )}>
+                              {notification.title}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {formatTime(notification.createdAt)}
+                            </p>
+                          </div>
+                          {!notification.isRead && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
+                          )}
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+                
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="justify-center text-blue-600 hover:text-blue-700 cursor-pointer"
+                  onClick={() => navigate("/notifications")}
+                >
+                  View all notifications
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -356,7 +510,7 @@ const DashboardLayout = ({ children }) => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-64 p-6  h-screen overflow-x-auto max-w-full">
+        <main className="flex-1 lg:ml-64 p-6 h-screen overflow-x-auto max-w-full">
           {children}
         </main>
       </div>
