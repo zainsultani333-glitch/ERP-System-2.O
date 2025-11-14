@@ -19,7 +19,8 @@ const DraftTrack = () => {
   const fetchStock = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/inventory/items/stock");
+      const res = await api.get("/inventory/purchases?status=Pending");
+
       if (res.data.success) {
         setStockData(res.data.data);
       } else {
@@ -37,20 +38,43 @@ const DraftTrack = () => {
     fetchStock();
   }, []);
 
+  console.log({ stockData });
+
   // Filter
-  const filteredStock = stockData.filter(
-    (item) =>
-      item.itemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.itemCode?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStock = stockData.filter((item) => {
+    const term = searchTerm.toLowerCase();
+
+    return (
+      item.purchaseNo?.toLowerCase().includes(term) ||
+      item.supplier?.supplierName?.toLowerCase().includes(term) ||
+      item.warehouse?.warehouseName?.toLowerCase().includes(term) ||
+      item.items[0]?.itemId?.itemName?.toLowerCase().includes(term)
+    );
+  });
 
   // Pagination
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentStock = filteredStock.slice(startIndex, endIndex);
 
-  const handleReceived = (itemId) => {
-    toast.success(`Item #${itemId} marked as Received!`);
+  const handleReceived = async (purchaseId) => {
+    try {
+      setLoading(true);
+
+      const res = await api.post(`/inventory/purchases/receive/${purchaseId}`);
+
+      if (res.data.success) {
+        toast.success("Purchase marked as RECEIVED successfully!");
+        fetchStock(); // Refresh pending list
+      } else {
+        toast.error("Failed to update purchase status!");
+      }
+    } catch (error) {
+      console.error("Receive Error:", error);
+      toast.error("Error marking purchase as received");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -112,19 +136,25 @@ const DraftTrack = () => {
                       Sr
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase">
-                      Item Code
+                      Purchase No
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase">
+                      Date
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase">
+                      Supplier
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase">
+                      Warehouse
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase">
                       Item Name
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase">
-                      Opening Stock
+                      Qty
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase">
-                      Purchase Rate
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase">
-                      Location
+                      Total (€)
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase">
                       Actions
@@ -138,48 +168,59 @@ const DraftTrack = () => {
                       <td colSpan="10" className="py-20">
                         <div className="flex flex-col items-center justify-center">
                           <Loader className="w-10 h-10 text-primary animate-spin mb-3" />
-                         
                         </div>
                       </td>
                     </tr>
                   ) : filteredStock.length > 0 ? (
-                    currentStock.map((item, index) => (
+                    currentStock.map((purchase, index) => (
                       <tr
-                        key={item._id || index}
-                        className="group hover:bg-primary/5 transition-all duration-300"
+                        key={purchase._id}
+                        className="hover:bg-primary/5 transition-all"
                       >
                         <td className="px-6 py-4 font-semibold">
                           {startIndex + index + 1}
                         </td>
 
                         <td className="px-6 py-4">
-                          <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20">
-                            {item.itemCode || "-"}
+                          <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
+                            {purchase?.purchaseNo || "-"}
                           </div>
                         </td>
 
+                        <td className="px-6 py-4">
+                          {new Date(
+                            purchase.purchaseDate
+                          ).toLocaleDateString() || "-"}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {purchase.supplier?.supplierName || "-"}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {purchase.warehouse?.warehouseName || "-"}
+                        </td>
+
                         <td className="px-6 py-4 font-semibold">
-                          {item.itemName}
-                        </td>
-
-                        <td className="px-6 py-4">{item.openingStock}</td>
-
-                        <td className="px-6 py-4">€{item.purchaseRate}</td>
-
-                        <td className="px-6 py-4">
-                          {item?.warehouseId?.warehouseAddress || "-"}
+                          {purchase.items[0]?.itemId?.itemName || "-"}
                         </td>
 
                         <td className="px-6 py-4">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-green-600 hover:text-green-800"
-                            onClick={() => handleReceived(item._id)}
+                          {purchase.items[0]?.quantity || "-"}
+                        </td>
+
+                        <td className="px-6 py-4 font-semibold text-green-600">
+                          € {purchase.grandTotal?.toLocaleString() || "-"}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <button
+                            className="text-green-600 flex items-center hover:text-green-800"
+                            onClick={() => handleReceived(purchase._id)}
                           >
                             <CheckCircle className="w-5 h-5 mr-1" />
                             Received
-                          </Button>
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -188,7 +229,7 @@ const DraftTrack = () => {
                       <td colSpan="10" className="text-center py-12">
                         <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
                         <p className="text-muted-foreground font-medium text-lg">
-                          No Draft track items found
+                          No pending purchases found
                         </p>
                       </td>
                     </tr>

@@ -88,33 +88,49 @@ const StockPurchaseDetails = () => {
   const [minStockLevel, setMinStockLevel] = useState("");
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
+  const [editItemIndex, setEditItemIndex] = useState(null);
+  const [isItemEditMode, setIsItemEditMode] = useState(false);
 
   const { token } = useAuth();
+
   const handleAddPurchaseItem = () => {
-    if (!itemId || !quantity || !unitCost || !barcode || !description) {
-      toast.error("Please fill all Items required fields");
-      return;
-    }
+  if (!itemId || !quantity || !unitCost || !barcode || !description) {
+    toast.error("Please fill all Items required fields");
+    return;
+  }
 
-    const selectedItemName = itemNames.find((x) => x._id === itemId)?.itemName;
+  const selectedItemName = itemNames.find((x) => x._id === itemId)?.itemName;
 
-    const newItem = {
-      itemId,
-      itemName: selectedItemName,
-      description,
-      quantity: Number(quantity),
-      unitCost: Number(unitCost),
-      barcode,
-    };
-
-    setPurchaseItems([...purchaseItems, newItem]);
-
-    setItemId("");
-    setDescription("");
-    setQuantity("");
-    setUnitCost("");
-    setBarcode("");
+  const newItem = {
+    itemId,
+    itemName: selectedItemName,
+    description,
+    quantity: Number(quantity),
+    unitCost: Number(unitCost),
+    barcode,
   };
+
+  // 🔥 EDIT MODE
+  if (isItemEditMode && editItemIndex !== null) {
+    const updatedList = [...purchaseItems];
+    updatedList[editItemIndex] = newItem;
+    setPurchaseItems(updatedList);
+  } else {
+    // 🔥 ADD MODE
+    setPurchaseItems([...purchaseItems, newItem]);
+  }
+
+  // Reset form
+  setItemId("");
+  setDescription("");
+  setQuantity("");
+  setUnitCost("");
+  setBarcode("");
+
+  setEditItemIndex(null);
+  setIsItemEditMode(false);
+};
+
 
   // Fetch stock data
   const fetchStock = async () => {
@@ -167,7 +183,10 @@ const StockPurchaseDetails = () => {
         // res.data.data = array of items
         setItemNames(res.data.data);
       } else {
-        toast.error("Failed to fetch item names");
+        setTimeout(() => {
+           toast.error("Failed to fetch item names");
+        }, 2000);
+       
       }
     } catch (error) {
       console.error("Error fetching item names:", error);
@@ -217,7 +236,7 @@ const StockPurchaseDetails = () => {
     if (isAddOpen) {
       fetchWarehouses();
       fetchSuppliers();
-      fetchItemNames(); // <-- REUSE YOUR OLD FUNCTION
+      fetchItemNames();
     }
   }, [isAddOpen]);
   // select item name auto select decription
@@ -365,11 +384,24 @@ const StockPurchaseDetails = () => {
       };
 
       // 🧩 Correct API (PURCHASE INVOICE)
-      const res = await api.post(`/inventory/purchases`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+
+      let res;
+
+      if (isEditMode && editStockId) {
+        // UPDATE MODE (PUT)
+        res = await api.put(`/inventory/purchases/${editStockId}`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      } else {
+        // CREATE MODE (POST)
+        res = await api.post(`/inventory/purchases`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
 
       if (res.data.success) {
         toast.success("Purchase added successfully!");
@@ -395,27 +427,38 @@ const StockPurchaseDetails = () => {
     }
   };
 
-  const handleEdit = (itemId) => {
-    const stockToEdit = stockData.find((s) => s._id === itemId);
-    if (!stockToEdit) {
-      toast.error("Stock entry not found!");
+  const handleEdit = (purchaseId) => {
+    const purchase = stockData.find((p) => p._id === purchaseId);
+
+    if (!purchase) {
+      toast.error("Purchase entry not found!");
       return;
     }
-    // console.log(stockToEdit);
 
-    // ✅ Set edit mode
+    console.log("Editing Purchase:", purchase);
+
     setIsEditMode(true);
-    setEditStockId(itemId);
+    setEditStockId(purchaseId);
     setIsAddOpen(true);
 
-    // Prefill all fields
-    setSelectedItem(stockToEdit.itemName || "");
-    setSelectedWarehouse(stockToEdit?.warehouseId?.warehouseName || "");
-    setOpeningStock(stockToEdit.openingStock?.toString() || "");
-    setPurchaseRate(stockToEdit.purchaseRate?.toString() || "");
-    setSellingPrice(stockToEdit.sellingPrice?.toString() || "");
-    setWholesalePrice(stockToEdit.wholesalePrice?.toString() || "");
-    setMinStockLevel(stockToEdit.minStockLevel?.toString() || "");
+    // TOP FIELDS
+    setPurchaseNo(purchase.purchaseNo || "");
+    setPurchaseDate(purchase.purchaseDate?.split("T")[0] || "");
+    setSupplier(purchase.supplier?._id || "");
+    setSelectedWarehouse(purchase.warehouse?._id || "");
+    setTrackingNumber(purchase.trackingNumber || "");
+
+    // ITEMS (convert API to your form structure)
+    const formattedItems = purchase.items.map((it) => ({
+      itemId: it.itemId._id,
+      itemName: it.itemId.itemName,
+      description: it.description,
+      quantity: it.quantity,
+      unitCost: it.unitCost,
+      barcode: it.barcode,
+    }));
+
+    setPurchaseItems(formattedItems);
   };
 
   const handleDelete = async (ItemId) => {
@@ -424,7 +467,7 @@ const StockPurchaseDetails = () => {
     try {
       setLoading(true);
       toast.loading("Deleting product...");
-      const res = await api.delete(`/inventory/items/${ItemId}`, {
+      const res = await api.delete(`/inventory/purchases/${ItemId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -455,6 +498,8 @@ const StockPurchaseDetails = () => {
       toast.error("Stock item not found!");
       return;
     }
+    console.log({ stock });
+
     setSelectedStock(stock);
     setIsViewOpen(true);
   };
@@ -487,6 +532,25 @@ const StockPurchaseDetails = () => {
     (sum, item) => sum + item.quantity * item.unitCost,
     0
   );
+  const handleEditItem = (index) => {
+    const item = purchaseItems[index];
+
+    setItemId(item.itemId);
+    setDescription(item.description);
+    setQuantity(item.quantity);
+    setUnitCost(item.unitCost);
+    setBarcode(item.barcode);
+
+    setEditItemIndex(index);
+    setIsItemEditMode(true);
+  };
+
+  useEffect(() => {
+  const totalPages = Math.ceil(filteredStock.length / itemsPerPage);
+  if (currentPage > totalPages) {
+    setCurrentPage(1);
+  }
+}, [filteredStock]);
 
   return (
     <DashboardLayout>
@@ -765,7 +829,7 @@ const StockPurchaseDetails = () => {
                       onClick={handleAddPurchaseItem}
                       className="mt-4 w-full bg-primary text-white"
                     >
-                      Add Item
+                      {isItemEditMode ? "Update Item" : "Add Item"}
                     </Button>
 
                     {/* Display Added Items */}
@@ -779,7 +843,7 @@ const StockPurchaseDetails = () => {
                               <th className="p-2 text-left">Qty</th>
                               <th className="p-2 text-left">Unit Cost</th>
                               <th className="p-2 text-left">Total</th>
-                              <th className="p-2 text-end">Remove</th>
+                              <th className="p-2 text-end">Action</th>
                             </tr>
                           </thead>
 
@@ -792,10 +856,19 @@ const StockPurchaseDetails = () => {
                                 <td className="p-2 font-semibold">
                                   €{it.quantity * it.unitCost}
                                 </td>
-                                <td className="p-2">
+                                <td className="p-2 flex gap-2 justify-end">
+                                  {/* Edit Button */}
+                                  <button
+                                    onClick={() => handleEditItem(i)}
+                                    className="text-blue-600 hover:text-blue-800"
+                                  >
+                                    <Edit size={18} />
+                                  </button>
+
+                                  {/* Remove Button */}
                                   <button
                                     onClick={() => handleRemoveItem(i)}
-                                    className="text-red-600 inline-flex justify-center w-full hover:text-red-800"
+                                    className="text-red-600 hover:text-red-800"
                                   >
                                     <Trash2 size={18} />
                                   </button>
@@ -852,8 +925,10 @@ const StockPurchaseDetails = () => {
                     {saving ? (
                       <div className="flex items-center justify-center">
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                        Saving...
+                        {isEditMode ? "Updating..." : "Saving..."}
                       </div>
+                    ) : isEditMode ? (
+                      "Update Purchase"
                     ) : (
                       "Save Purchase"
                     )}
@@ -1137,7 +1212,7 @@ const StockPurchaseDetails = () => {
                               className={`px-2 py-1 ${
                                 purchase.status === "Received"
                                   ? "bg-green-100 text-green-700"
-                                  : "bg-gray-300 text-gray-700"
+                                  : "bg-red-300 text-gray-600"
                               }`}
                             >
                               {purchase?.status}
