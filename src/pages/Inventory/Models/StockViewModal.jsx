@@ -1,6 +1,11 @@
 import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Eye, Loader, Package, Warehouse, AlertTriangle, TrendingUp } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Eye, Loader } from "lucide-react";
 
 const StockViewModal = ({ isOpen, onClose, stock }) => {
   return (
@@ -9,103 +14,108 @@ const StockViewModal = ({ isOpen, onClose, stock }) => {
         <DialogHeader className="border-b border-border/40 pb-3">
           <DialogTitle className="text-xl sm:text-2xl font-semibold text-foreground flex items-center gap-2">
             <Eye className="w-5 h-5 text-primary" />
-            Stock Details
+           Stock Purchase Details
           </DialogTitle>
         </DialogHeader>
 
         {stock ? (
-          <div className="space-y-5 pt-4">
-            {/* Image */}
-            <div className="flex justify-center">
-              <img
-                src={stock.itemImage?.url || "/placeholder.png"}
-                alt={stock.itemName}
-                className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl object-cover border-2 border-primary/20 shadow-md"
-              />
+          <div className="space-y-5 pt-4 px-2">
+            {/* ================= PURCHASE DETAILS ================= */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm sm:text-base">
+              <p className="font-medium text-muted-foreground">Purchase No:</p>
+              <p className="font-semibold">{stock.purchaseNo}</p>
+
+              <p className="font-medium text-muted-foreground">
+                Purchase Date:
+              </p>
+              <p className="font-semibold">
+                {new Date(stock.purchaseDate).toLocaleDateString()}
+              </p>
+
+              <p className="font-medium text-muted-foreground">Supplier:</p>
+              <p className="font-semibold">
+                {stock.supplier?.supplierName || "—"}
+              </p>
+
+              <p className="font-medium text-muted-foreground">Warehouse:</p>
+              <p className="font-semibold">
+                {stock.warehouse?.warehouseName || "—"}
+              </p>
+
+              <p className="font-medium text-muted-foreground">Tracking No:</p>
+              <p className="font-semibold">{stock.trackingNumber}</p>
+
+              <p className="font-medium text-muted-foreground">Status:</p>
+              <p className="font-semibold">{stock.status}</p>
             </div>
 
-            {/* Info */}
-            <div className="space-y-3 text-sm sm:text-base px-1 sm:px-2">
+            {/* ================= ITEM DETAILS ================= */}
+            <div className="border-t border-border/40 pt-4">
+              <h3 className="font-semibold text-lg mb-2">Item Details</h3>
+
+              {stock.items?.length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border border-border/40">
+                  <table className="w-full text-sm sm:text-base">
+                    <thead className="bg-muted/60 text-left">
+                      <tr>
+                        <th className="p-2 font-medium">#</th>
+                        <th className="p-2 font-medium">Item Name</th>
+                        <th className="p-2 font-medium">Description</th>
+                        <th className="p-2 font-medium">Qty</th>
+                        <th className="p-2 font-medium">Unit Cost</th>
+                        <th className="p-2 font-medium">Barcode</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {stock.items.map((itm, index) => (
+                        <tr
+                          key={index}
+                          className="border-t border-border/20 hover:bg-muted/40 transition"
+                        >
+                          <td className="p-2">{index + 1}</td>
+
+                          <td className="p-2 font-semibold">
+                            {itm.itemId?.itemName}
+                          </td>
+
+                          <td className="p-2">{itm.description}</td>
+
+                          <td className="p-2 font-medium">{itm.quantity}</td>
+
+                          <td className="p-2 text-green-700 font-semibold">
+                            € {itm.unitCost?.toLocaleString()}
+                          </td>
+
+                          <td className="p-2 font-mono">{itm.barcode}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No items available
+                </p>
+              )}
+            </div>
+
+            {/* ================= TOTALS ================= */}
+            <div className="border-t border-border/40 pt-4 text-sm sm:text-base">
+              <h3 className="font-semibold text-lg mb-2">Totals</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                <p className="font-medium text-muted-foreground">Item Code:</p>
-                <p className="font-semibold break-all">{stock.itemCode}</p>
-
-                <p className="font-medium text-muted-foreground">Item Name:</p>
-                <p className="font-semibold">{stock.itemName}</p>
-
-                <p className="font-medium text-muted-foreground">Category:</p>
-                <p className="font-semibold">{stock.category}</p>
-
-                <p className="font-medium text-muted-foreground">Unit:</p>
-                <p className="font-semibold">{stock.unitOfMeasure}</p>
-
-                <p className="font-medium text-muted-foreground">Warehouse:</p>
+                <p className="font-medium text-muted-foreground">Net Total:</p>
                 <p className="font-semibold">
-                  {stock.warehouseId?.warehouseName || "—"}
+                  € {stock.netTotal?.toLocaleString()}
                 </p>
 
-                <p className="font-medium text-muted-foreground">Address:</p>
-                <p className="font-semibold">
-                  {stock.warehouseId?.warehouseAddress || "—"}
-                </p>
+               
 
-                <p className="font-medium text-muted-foreground">In-Charge:</p>
-                <p className="font-semibold">
-                  {stock.warehouseId?.inCharge?.name || "—"}
+                <p className="font-medium text-muted-foreground">
+                  Grand Total:
                 </p>
-
-                <p className="font-medium text-muted-foreground">Opening Stock:</p>
-                <p className="font-semibold text-blue-700">
-                  {stock.openingStock}
-                </p>
-
-                <p className="font-medium text-muted-foreground">Purchase Rate:</p>
-                <p className="font-semibold text-green-700">
-                  € {stock.purchaseRate?.toLocaleString()}
-                </p>
-
-                <p className="font-medium text-muted-foreground">Selling Price:</p>
-                <p className="font-semibold text-green-700">
-                  € {stock.sellingPrice?.toLocaleString()}
-                </p>
-
-                <p className="font-medium text-muted-foreground">Wholesale Price:</p>
-                <p className="font-semibold text-green-700">
-                  € {stock.wholesalePrice?.toLocaleString()}
-                </p>
-
-                <p className="font-medium text-muted-foreground">Min Stock Level:</p>
-                <p className="font-semibold text-amber-700">
-                  {stock.minStockLevel}
-                </p>
-
-                <p className="font-medium text-muted-foreground">Profit / Item:</p>
-                <p className="font-semibold text-emerald-700">
-                  € {stock.profitPerItem}
-                </p>
-
-                <p className="font-medium text-muted-foreground">Margin %:</p>
-                <p className="font-semibold text-emerald-700">
-                  {stock.marginPercent}%
-                </p>
-
-                <p className="font-medium text-muted-foreground">Created At:</p>
-                <p className="font-semibold">
-                  {new Date(stock.createdAt).toLocaleDateString()}
-                </p>
-
-                <p className="font-medium text-muted-foreground">Updated At:</p>
-                <p className="font-semibold">
-                  {new Date(stock.updatedAt).toLocaleDateString()}
-                </p>
-              </div>
-
-              <div className="mt-3">
-                <p className="font-medium text-muted-foreground mb-1">
-                  Description:
-                </p>
-                <p className="bg-muted/80 rounded-md p-3 text-foreground text-sm sm:text-base break-words">
-                  {stock.description || "No description available"}
+                <p className="font-semibold text-primary text-lg">
+                  € {stock.grandTotal?.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -113,7 +123,7 @@ const StockViewModal = ({ isOpen, onClose, stock }) => {
         ) : (
           <div className="text-center text-muted-foreground py-10">
             <Loader className="w-6 h-6 animate-spin mx-auto mb-3 text-primary" />
-            Loading stock details...
+            Loading details...
           </div>
         )}
       </DialogContent>
