@@ -24,13 +24,7 @@ import {
   Loader,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import api from "../../Api/AxiosInstance";
 import CategoryViewDialog from "../Inventory/Models/CategoryViewModal";
 import Pagination from "../../components//Pagination";
@@ -121,6 +115,7 @@ const CategoryPage = () => {
           name: item.categoryName || "-",
           description: item.description || "-",
           status: item.status || "-",
+          sizes: item.sizes || "-",
           logo: item.logo?.url || "",
           createdAt: new Date(item.createdAt).toLocaleDateString(),
         }));
@@ -178,22 +173,30 @@ const CategoryPage = () => {
       formData.append("categoryName", newCategory.name);
       formData.append("description", newCategory.description);
       formData.append("status", newCategory.status);
-      if (newCategory.logoFile) formData.append("logo", newCategory.logoFile);
 
-      // Get token from localStorage (or wherever you store it)
+      // Logo (optional)
+      if (newCategory.logoFile) {
+        formData.append("logo", newCategory.logoFile);
+      }
+
+      // 🟢 ADD SIZES EXACTLY LIKE POSTMAN
+      if (newCategory.sizes?.length > 0) {
+        const sizeString = newCategory.sizes.map((s) => s.name).join(", ");
+        formData.append("sizes", sizeString); // NOW MATCHES POSTMAN
+      }
+
+      // Get token
       const token = localStorage.getItem("token");
 
       if (editingCategory) {
-        // Update category
         await api.put(`/categories/${editingCategory.id}`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data", // important for file uploads
+            "Content-Type": "multipart/form-data",
           },
         });
         toast.success("Category updated successfully!");
       } else {
-        // Add new category
         await api.post("/categories", formData, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -202,6 +205,7 @@ const CategoryPage = () => {
         });
         toast.success("Category added successfully!");
       }
+
       setIsAddOpen(false);
       clearForm();
       setEditingCategory(null);
@@ -213,29 +217,36 @@ const CategoryPage = () => {
       );
       toast.error(error.response?.data?.message || "Failed to save category");
     } finally {
-      setSaving(false); // hide spinner
+      setSaving(false);
     }
   };
 
   // 🟢 Edit Category
   const handleEdit = (category) => {
+    console.log({ category });
+
     setEditingCategory(category);
+
     setNewCategory({
       name: category.name,
       description: category.description,
       status: category.status,
       logo: category.logo,
+
+      // 🟢 Convert array ["XL","LG"] → [{ name: "XL" }, { name: "LG" }]
+      sizes: Array.isArray(category.sizes)
+        ? category.sizes.map((size) => ({ name: size }))
+        : [],
     });
+
     setIsAddOpen(true);
   };
 
   // 🟢 Delete Category
   const handleDelete = async (categoryId) => {
     try {
-      const confirmDelete = window.confirm(
-        "Are you sure you want to delete this category?"
-      );
-      if (!confirmDelete) return;
+      
+    
 
       setLoading(true); // show loader
 
@@ -292,18 +303,60 @@ const CategoryPage = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              <DialogTrigger asChild>
+            <Dialog
+              open={isAddOpen}
+              onOpenChange={(open) => {
+                setIsAddOpen(open);
+                if (!open) {
+                  // Reset the form when closing
+                  setNewCategory({
+                    logo: null,
+                    logoFile: null,
+                    name: "",
+                    description: "",
+                    status: "Active",
+                    sizes: [],
+                  });
+                  setSizeInput({ name: "" });
+                  setEditingCategory(null);
+                }
+              }}
+            >
+              <DialogTrigger
+                asChild
+                onClick={() => {
+                  setEditingCategory(null); // not editing anymore
+                  setNewCategory({
+                    logo: null,
+                    logoFile: null,
+                    name: "",
+                    description: "",
+                    status: "Active",
+                    sizes: [],
+                  });
+                  setSizeInput({ name: "" });
+                }}
+              >
                 <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Category
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
+
+              <DialogContent className="max-w-2xl max-h-full overflow-y-scroll overflow-x-hidden bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
-                    <Plus className="w-5 h-5 text-primary" />
-                    Add New Category
+                    {editingCategory ? (
+                      <>
+                        <Edit className="w-5 h-5 text-primary" />
+                        Edit Category
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-5 h-5 text-primary" />
+                        Add New Category
+                      </>
+                    )}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 pt-4">
@@ -312,6 +365,27 @@ const CategoryPage = () => {
                     <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                       Logo / Image
                     </Label>
+
+                    {/* 🟢 Existing logo preview (Edit Mode) */}
+                    {editingCategory &&
+                      newCategory.logo &&
+                      !newCategory.logoFile && (
+                        <img
+                          src={newCategory.logo}
+                          alt="Existing Logo"
+                          className="w-20 h-20 object-cover rounded-lg mb-3 border"
+                        />
+                      )}
+
+                    {/* 🟢 New logo selected preview */}
+                    {newCategory.logoFile && (
+                      <img
+                        src={URL.createObjectURL(newCategory.logoFile)}
+                        alt="New Logo Preview"
+                        className="w-20 h-20 object-cover rounded-lg mb-3 border"
+                      />
+                    )}
+
                     <Input
                       type="file"
                       accept="image/*"
@@ -355,27 +429,6 @@ const CategoryPage = () => {
                     />
                   </div>
 
-                  {/* Status */}
-                  {/* <div className="space-y-2">
-                    <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-                      Status
-                    </Label>
-                    <Select
-                      value={newCategory.status}
-                      onValueChange={(value) =>
-                        setNewCategory({ ...newCategory, status: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div> */}
-
                   {/* SIZE CHART SECTION */}
                   <div className="mt-6 p-4 rounded-lg border bg-muted/30">
                     {/* Size + Add button in one line */}
@@ -400,7 +453,10 @@ const CategoryPage = () => {
                             if (!sizeInput.name) return; // Only add if size is not empty
                             setNewCategory({
                               ...newCategory,
-                              sizes: [...(newCategory.sizes || []), { name: sizeInput.name }],
+                              sizes: [
+                                ...(newCategory.sizes || []),
+                                { name: sizeInput.name },
+                              ],
                             });
                             setSizeInput({ name: "" });
                           }}
@@ -418,26 +474,37 @@ const CategoryPage = () => {
                         <table className="w-full border">
                           <thead className="bg-gray-100">
                             <tr>
-                              <th className="p-2 text-left font-semibold">Sr #</th>
-                              <th className="p-2 text-left font-semibold">Size</th>
-                              <th className="p-2 text-right font-semibold">Action</th>
+                              <th className="p-2 text-left font-semibold">
+                                Sr #
+                              </th>
+                              <th className="p-2 text-left font-semibold">
+                                Size
+                              </th>
+                              <th className="p-2 text-right font-semibold">
+                                Action
+                              </th>
                             </tr>
                           </thead>
 
                           <tbody>
                             {newCategory.sizes.map((size, i) => (
                               <tr key={i} className="border-t">
-                                <td className="p-2 text-left">{i + 1}.</td> {/* Serial Number */}
+                                <td className="p-2 text-left">{i + 1}.</td>{" "}
+                                {/* Serial Number */}
                                 <td className="p-2 text-left">{size.name}</td>
                                 <td className="p-2 text-right pr-3">
                                   {/* Cross to remove */}
                                   <span
                                     className="text-red-600 cursor-pointer hover:text-red-800 font-bold text-xl pr-3"
                                     onClick={() => {
-                                      const updatedSizes = newCategory.sizes.filter(
-                                        (_, index) => index !== i
-                                      );
-                                      setNewCategory({ ...newCategory, sizes: updatedSizes });
+                                      const updatedSizes =
+                                        newCategory.sizes.filter(
+                                          (_, index) => index !== i
+                                        );
+                                      setNewCategory({
+                                        ...newCategory,
+                                        sizes: updatedSizes,
+                                      });
                                     }}
                                   >
                                     ×
@@ -451,10 +518,6 @@ const CategoryPage = () => {
                     )}
                   </div>
 
-
-
-
-
                   {/* Save / Update Button */}
                   <Button
                     className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium flex items-center justify-center gap-2"
@@ -467,12 +530,11 @@ const CategoryPage = () => {
                         ? "Updating..."
                         : "Saving..."
                       : editingCategory
-                        ? "Update Category"
-                        : "Save Category"}
+                      ? "Update Category"
+                      : "Save Category"}
                   </Button>
                 </div>
               </DialogContent>
-
             </Dialog>
           </div>
         </div>
@@ -558,6 +620,9 @@ const CategoryPage = () => {
                       Description
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                      Sizes
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-foreground/80 uppercase tracking-wider">
@@ -567,7 +632,13 @@ const CategoryPage = () => {
                 </thead>
 
                 {loading ? (
-                  <TableLoader message="Fetching categories..." />
+                  <tr>
+                    <td colSpan="10" className="py-20">
+                      <div className="flex flex-col items-center justify-center w-full">
+                        <Loader className="w-10 h-10 text-primary animate-spin mb-3" />
+                      </div>
+                    </td>
+                  </tr>
                 ) : (
                   <tbody className="divide-y divide-border/30">
                     {filteredCategories.length > 0 ? (
@@ -590,6 +661,13 @@ const CategoryPage = () => {
                             {category.name}
                           </td>
                           <td className="px-6 py-4">{category.description}</td>
+                          <td className="px-6 py-4">
+                            {Array.isArray(category.sizes) &&
+                            category.sizes.length > 0
+                              ? category.sizes.join(", ")
+                              : "-"}
+                          </td>
+
                           <td className="px-6 py-4">
                             <Badge
                               variant={

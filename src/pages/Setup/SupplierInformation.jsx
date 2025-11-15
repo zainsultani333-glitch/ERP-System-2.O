@@ -10,6 +10,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -175,7 +183,9 @@ const SupplierInformation = () => {
       }
 
       if (res.data.success) {
-        toast.success(isEditMode ? "Supplier updated!" : "Supplier added successfully!");
+        toast.success(
+          isEditMode ? "Supplier updated!" : "Supplier added successfully!"
+        );
         fetchSuppliers();
         setIsAddOpen(false);
         setForm({
@@ -294,11 +304,15 @@ const SupplierInformation = () => {
                 <div className="space-y-6 pt-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Supplier Name <span className="text-red-500">*</span> </Label>
+                      <Label>
+                        Supplier Name <span className="text-red-500">*</span>{" "}
+                      </Label>
                       <Input
                         placeholder="e.g. ABC Traders"
                         value={form.supplierName}
-                        onChange={(e) => setForm({ ...form, supplierName: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, supplierName: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -306,7 +320,9 @@ const SupplierInformation = () => {
                       <Input
                         placeholder="e.g. ABC Distributors Ltd."
                         value={form.company}
-                        onChange={(e) => setForm({ ...form, company: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, company: e.target.value })
+                        }
                       />
                     </div>
                   </div>
@@ -317,40 +333,100 @@ const SupplierInformation = () => {
                       <Input
                         placeholder="e.g. Plot 22, Industrial Area, Lahore"
                         value={form.address}
-                        onChange={(e) => setForm({ ...form, address: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, address: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>VAT Number</Label>
-                      <Input
-                        placeholder="e.g. PK-123456789"
-                        value={form.vatNumber}
-                        onChange={(e) => setForm({ ...form, vatNumber: e.target.value })}
-                      />
+
+                      <div className="flex items-center border-2 rounded-lg overflow-hidden bg-white">
+                        {/* VAT Country Code Dropdown */}
+                        <Select
+                          value={form.vatPrefix}
+                          onValueChange={(value) =>
+                            setForm({ ...form, vatPrefix: value })
+                          }
+                        >
+                          <SelectTrigger className="w-24 border-0 rounded-none bg-muted/30 h-[42px]">
+                            <SelectValue placeholder="FR" />
+                          </SelectTrigger>
+
+                          <SelectContent className="max-h-60">
+                            {[
+                              "AT",
+                              "BE",
+                              "BG",
+                              "CY",
+                              "CZ",
+                              "DE",
+                              "DK",
+                              "EE",
+                              "EL",
+                              "ES",
+                              "FI",
+                              "FR",
+                              "HR",
+                              "HU",
+                              "IE",
+                              "IT",
+                              "LT",
+                              "LU",
+                              "LV",
+                              "MT",
+                              "NL",
+                              "PL",
+                              "PT",
+                              "RO",
+                              "SE",
+                              "SI",
+                              "SK",
+                            ].map((prefix) => (
+                              <SelectItem key={prefix} value={prefix}>
+                                {prefix}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        {/* VAT Number Input */}
+                        <Input
+                          placeholder="Enter VAT Number"
+                          value={form.vatNumber}
+                          onChange={(e) =>
+                            setForm({ ...form, vatNumber: e.target.value })
+                          }
+                          className="border-0 rounded-none h-[42px] flex-1"
+                        />
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-
                     <div className="space-y-2">
                       <Label>Email</Label>
                       <Input
                         type="email"
                         placeholder="e.g. abc@suppliers.com"
                         value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, email: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Phone</Label>
                       <Input
-                        placeholder="e.g. +92300-1234567"
+                        placeholder="e.g. Enter Number"
                         value={form.phone}
-                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        onChange={(e) => {
+                          // Allow ONLY digits
+                          const cleaned = e.target.value.replace(/[^0-9]/g, "");
+                          setForm({ ...form, phone: cleaned });
+                        }}
                       />
                     </div>
                   </div>
-
-
 
                   <Button
                     className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium"
@@ -379,8 +455,12 @@ const SupplierInformation = () => {
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-md transition-shadow duration-300">
             <CardContent className="p-4 flex justify-between items-center">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Suppliers</p>
-                <p className="text-2xl font-bold text-blue-900">{summary.totalSuppliers || 0}</p>
+                <p className="text-sm font-medium text-blue-700">
+                  Total Suppliers
+                </p>
+                <p className="text-2xl font-bold text-blue-900">
+                  {summary.totalSuppliers || 0}
+                </p>
               </div>
               <Building2 className="w-5 h-5 text-blue-600" />
             </CardContent>
@@ -415,7 +495,10 @@ const SupplierInformation = () => {
                 Supplier Records
               </CardTitle>
               <div className="flex items-center gap-3">
-                <Badge variant="primary" className="bg-primary/10 text-primary border-primary/20">
+                <Badge
+                  variant="primary"
+                  className="bg-primary/10 text-primary border-primary/20"
+                >
                   {filteredSuppliers.length} entries
                 </Badge>
                 <Button
@@ -435,78 +518,135 @@ const SupplierInformation = () => {
               <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
                 <tr>
                   {visibleFields.includes("sr") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[60px]">Sr</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[60px]">
+                      Sr
+                    </th>
                   )}
                   {visibleFields.includes("supplierName") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[120px]">Supplier Name</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[120px]">
+                      Supplier Name
+                    </th>
                   )}
                   {visibleFields.includes("company") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[130px]">Company</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[130px]">
+                      Company
+                    </th>
                   )}
                   {visibleFields.includes("address") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[180px]">Address</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[180px]">
+                      Address
+                    </th>
                   )}
                   {visibleFields.includes("vatNumber") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[100px]">VAT Number</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[100px]">
+                      VAT Number
+                    </th>
                   )}
                   {visibleFields.includes("avgPurchasePrice") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[140px]">Avg Purchase Price</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[140px]">
+                      Avg Purchase Price
+                    </th>
                   )}
                   {visibleFields.includes("totalSpendings") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[140px]">Total Spendings</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[140px]">
+                      Total Spendings
+                    </th>
                   )}
                   {visibleFields.includes("orders") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[120px]">Orders</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[120px]">
+                      Orders
+                    </th>
                   )}
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[100px]">Actions</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[100px]">
+                    Actions
+                  </th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-border/30">
                 {loading ? (
                   <tr>
-                    <td colSpan={visibleFields.length + 1} className="py-20 text-center">
+                    <td
+                      colSpan={visibleFields.length + 1}
+                      className="py-20 text-center"
+                    >
                       <div className="flex flex-col items-center justify-center">
                         <Loader className="w-10 h-10 text-primary animate-spin mb-3" />
-                        <p className="text-muted-foreground">Loading suppliers...</p>
+                        <p className="text-muted-foreground">
+                          Loading suppliers...
+                        </p>
                       </div>
                     </td>
                   </tr>
                 ) : currentSuppliers.length > 0 ? (
                   currentSuppliers.map((s, index) => (
-                    <tr key={s._id} className="group hover:bg-primary/5 transition-all duration-300">
+                    <tr
+                      key={s._id}
+                      className="group hover:bg-primary/5 transition-all duration-300"
+                    >
                       {visibleFields.includes("sr") && (
-                        <td className="px-6 py-4 font-semibold whitespace-nowrap">{startIndex + index + 1}</td>
+                        <td className="px-6 py-4 font-semibold whitespace-nowrap">
+                          {startIndex + index + 1}
+                        </td>
                       )}
                       {visibleFields.includes("supplierName") && (
-                        <td className="px-6 py-4 font-semibold whitespace-nowrap max-w-[120px] truncate">{s.supplierName || "-"}</td>
+                        <td className="px-6 py-4 font-semibold whitespace-nowrap max-w-[120px] truncate">
+                          {s.supplierName || "-"}
+                        </td>
                       )}
                       {visibleFields.includes("company") && (
-                        <td className="px-6 py-4 whitespace-nowrap max-w-[130px] truncate">{s.company || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap max-w-[130px] truncate">
+                          {s.company || "-"}
+                        </td>
                       )}
                       {visibleFields.includes("address") && (
-                        <td className="px-6 py-4 whitespace-nowrap max-w-[200px] truncate">{s.address || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap max-w-[200px] truncate">
+                          {s.address || "-"}
+                        </td>
                       )}
                       {visibleFields.includes("vatNumber") && (
-                        <td className="px-6 py-4 whitespace-nowrap">{s.vatNumber || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {s.vatNumber || "-"}
+                        </td>
                       )}
                       {visibleFields.includes("avgPurchasePrice") && (
-                        <td className="px-6 py-4 whitespace-nowrap">€{s.avgPurchasePrice || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          €{s.avgPurchasePrice || 0}
+                        </td>
                       )}
                       {visibleFields.includes("totalSpendings") && (
-                        <td className="px-6 py-4 whitespace-nowrap">€{s.totalSpendings || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          €{s.totalSpendings || 0}
+                        </td>
                       )}
                       {visibleFields.includes("orders") && (
-                        <td className="px-6 py-4 whitespace-nowrap">{s.numberOfOrders || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {s.numberOfOrders || 0}
+                        </td>
                       )}
                       <td className="px-4 py-2 flex items-center">
-                        <Button variant="ghost" size="sm" onClick={() => handleView(s._id)} title="View">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleView(s._id)}
+                          title="View"
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(s._id)} title="Edit">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(s._id)}
+                          title="Edit"
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(s._id)} title="Delete">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(s._id)}
+                          title="Delete"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </td>
@@ -514,9 +654,14 @@ const SupplierInformation = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={visibleFields.length + 1} className="text-center py-12">
+                    <td
+                      colSpan={visibleFields.length + 1}
+                      className="text-center py-12"
+                    >
                       <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                      <p className="text-muted-foreground font-medium text-lg">No suppliers found</p>
+                      <p className="text-muted-foreground font-medium text-lg">
+                        No suppliers found
+                      </p>
                     </td>
                   </tr>
                 )}
@@ -538,7 +683,9 @@ const SupplierInformation = () => {
         <DialogContent className="max-w-md bg-gradient-to-b from-white/95 to-white/80 dark:from-gray-900/95 dark:to-gray-900/80 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl">
           <DialogHeader className="pb-3 border-b border-border/30">
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">Settings</span>
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+                Settings
+              </span>
               Customize Display
             </DialogTitle>
           </DialogHeader>
@@ -560,13 +707,17 @@ const SupplierInformation = () => {
               { key: "totalSpendings", label: "Total Spendings" },
               { key: "orders", label: "Orders" },
             ].map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer border hover:border-primary/30 hover:bg-primary/5 transition-all">
+              <label
+                key={key}
+                className="flex items-center gap-3 p-3 rounded-xl cursor-pointer border hover:border-primary/30 hover:bg-primary/5 transition-all"
+              >
                 <input
                   type="checkbox"
                   checked={tempVisibleFields.includes(key)}
                   onChange={() => {
                     setTempVisibleFields((prev) => {
-                      if (prev.includes(key)) return prev.filter((f) => f !== key);
+                      if (prev.includes(key))
+                        return prev.filter((f) => f !== key);
                       if (prev.length >= 6) {
                         setFieldLimitAlert(true);
                         setTimeout(() => setFieldLimitAlert(false), 2500);
@@ -589,7 +740,11 @@ const SupplierInformation = () => {
       </Dialog>
 
       {/* View Modal */}
-      <SupplierViewModal isOpen={isViewOpen} onClose={setIsViewOpen} supplier={selectedSupplier} />
+      <SupplierViewModal
+        isOpen={isViewOpen}
+        onClose={setIsViewOpen}
+        supplier={selectedSupplier}
+      />
     </DashboardLayout>
   );
 };

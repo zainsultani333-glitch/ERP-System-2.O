@@ -449,16 +449,17 @@ const CustomerDefinition = () => {
                     </div>
 
                     {/* Phone Number */}
+                    {/* Phone Number */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium flex items-center gap-2">
                         Phone Number
                       </Label>
                       <Input
-                        placeholder="Enter number"
+                        placeholder="Enter phone number"
                         value={newCustomer.phoneNumber || ""}
                         onChange={(e) => {
                           const value = e.target.value;
-                          const cleaned = value.replace(/[^0-9+\-\s]/g, "");
+                          const cleaned = value.replace(/[^0-9]/g, ""); // ❗ only numbers
                           setNewCustomer({
                             ...newCustomer,
                             phoneNumber: cleaned,
@@ -529,25 +530,7 @@ const CustomerDefinition = () => {
                       </Select>
                     </div>
 
-                    {/* VAT Number */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        VAT Number<span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        placeholder="VAT12345"
-                        value={newCustomer.vatNumber}
-                        onChange={(e) =>
-                          setNewCustomer({
-                            ...newCustomer,
-                            vatNumber: e.target.value,
-                          })
-                        }
-                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-                      />
-                    </div>
-
-                    {/* Customer Type */}
+                    {/* Customer Type FIRST */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium flex items-center gap-2">
                         Customer Type<span className="text-red-500">*</span>
@@ -558,6 +541,8 @@ const CustomerDefinition = () => {
                           setNewCustomer({
                             ...newCustomer,
                             customerType: value,
+                            vatNumber: "",
+                            vatPrefix: "FR", // reset when switching to Individual
                           })
                         }
                       >
@@ -571,30 +556,81 @@ const CustomerDefinition = () => {
                       </Select>
                     </div>
 
-                    {/* VAT Regime */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        VAT Regime
-                      </Label>
-                      <Select
-                        value={newCustomer.vatRegime}
-                        onValueChange={(value) =>
-                          setNewCustomer({ ...newCustomer, vatRegime: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select regime" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0%">0%</SelectItem>
-                          <SelectItem value="Local VAT">Local VAT</SelectItem>
-                          <SelectItem value="VAT Margin">VAT Margin</SelectItem>
-                          <SelectItem value="Customer Local Rate">
-                            Customer Local Rate
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* VAT Number — SHOW ONLY IF COMPANY */}
+                    {newCustomer.customerType === "Company" && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          VAT Number <span className="text-red-500">*</span>
+                        </Label>
+
+                        <div className="flex items-center border-2 rounded-lg overflow-hidden bg-white">
+                          {/* VAT Prefix Dropdown */}
+                          <Select
+                            value={newCustomer.vatPrefix}
+                            onValueChange={(value) =>
+                              setNewCustomer({
+                                ...newCustomer,
+                                vatPrefix: value,
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-24 border-0 rounded-none bg-muted/30 h-[42px]">
+                              <SelectValue placeholder="FR" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60">
+                              {[
+                                "AT",
+                                "BE",
+                                "BG",
+                                "CY",
+                                "CZ",
+                                "DE",
+                                "DK",
+                                "EE",
+                                "EL",
+                                "ES",
+                                "FI",
+                                "FR",
+                                "HR",
+                                "HU",
+                                "IE",
+                                "IT",
+                                "LT",
+                                "LU",
+                                "LV",
+                                "MT",
+                                "NL",
+                                "PL",
+                                "PT",
+                                "RO",
+                                "SE",
+                                "SI",
+                                "SK",
+                              ].map((prefix) => (
+                                <SelectItem key={prefix} value={prefix}>
+                                  {prefix}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {/* VAT Number Input */}
+                          <Input
+                            placeholder="Enter VAT Number"
+                            value={newCustomer.vatNumber}
+                            onChange={(e) =>
+                              setNewCustomer({
+                                ...newCustomer,
+                                vatNumber: e.target.value,
+                              })
+                            }
+                            className="border-0 rounded-none h-[42px] flex-1"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                   
 
                     {/* Default VAT Rate */}
                     <div className="space-y-2">
@@ -626,8 +662,8 @@ const CustomerDefinition = () => {
                         ? "Updating..."
                         : "Saving..."
                       : editingCustomer
-                        ? "Update Customer"
-                        : "Save Customer"}
+                      ? "Update Customer"
+                      : "Save Customer"}
                   </Button>
                 </div>
               </DialogContent>

@@ -40,6 +40,13 @@ import ProductViewModal from "./Models/ProductViewModal";
 import Pagination from "../../components/Pagination";
 
 const ProductInfo = () => {
+  // NEW STATES NEEDED
+  const [itemName, setItemName] = useState("");
+  const [sku, setSku] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [sizes, setSizes] = useState([]);
+  const [selectedSize, setSelectedSize] = useState("");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -140,6 +147,15 @@ const ProductInfo = () => {
     }
   }, [products, isAddOpen, isEditMode]);
 
+  useEffect(() => {
+    if (!selectedCategory) return;
+
+    const cat = categories.find((c) => c.categoryName === selectedCategory);
+    if (cat && cat.sizes) {
+      setSizes(cat.sizes); // expects array like ["XL", "L", "M"]
+    }
+  }, [selectedCategory, categories]);
+
   const filteredProducts = products.filter(
     (item) =>
       item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -202,7 +218,9 @@ const ProductInfo = () => {
   };
 
   const handleAddProduct = async () => {
-    const nameInput = document.querySelector('input[placeholder="Product title"]');
+    const nameInput = document.querySelector(
+      'input[placeholder="Product title"]'
+    );
     if (!nameInput.value.trim()) {
       toast.error("Item Name is required!");
       return;
@@ -416,30 +434,23 @@ const ProductInfo = () => {
                         className="focus:ring-2 focus:ring-primary/20 border-2 transition-all duration-200 bg-gray-100 cursor-not-allowed"
                       />
                     </div>
+
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-foreground">
                         Item Name <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         placeholder="Product title"
+                        value={itemName}
+                        onChange={(e) => setItemName(e.target.value)}
                         className="focus:ring-2 focus:ring-primary/20 border-2 transition-all duration-200"
                       />
                     </div>
                   </div>
 
-                  {/* Description */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-foreground">
-                      Description
-                    </Label>
-                    <textarea
-                      className="w-full min-h-24 px-3 py-3 text-sm rounded-lg border-2 border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all duration-200 resize-none"
-                      placeholder="Full product description..."
-                    />
-                  </div>
-
-                  {/* Category & Unit */}
+                  {/* Category + Size (Same Line) */}
                   <div className="grid grid-cols-2 gap-4">
+                    {/* Category Selection */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                         <Package className="w-4 h-4" />
@@ -449,7 +460,6 @@ const ProductInfo = () => {
                       {categoryLoading ? (
                         <div className="flex justify-center items-center h-12 border rounded-lg bg-muted/30">
                           <Loader className="w-5 h-5 text-primary animate-spin mr-2" />
-                          <span className="text-sm text-muted-foreground"></span>
                         </div>
                       ) : (
                         <Select
@@ -490,27 +500,62 @@ const ProductInfo = () => {
                       )}
                     </div>
 
-                    <div className="space-y-2">
+                    {/* Size Dropdown */}
+                    <div className="space-y-1">
                       <Label className="text-sm font-medium text-foreground">
-                        Unit of Measure
+                      Size
                       </Label>
-                      <Input
-                        placeholder="PCS, KG, Liter, etc."
-                        className="focus:ring-2 focus:ring-primary/20 border-2 transition-all duration-200"
-                      />
+                      <Select
+                        value={selectedSize}
+                        onValueChange={setSelectedSize}
+                      >
+                        <SelectTrigger className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
+                          <SelectValue placeholder="Select Size" />
+                        </SelectTrigger>
+
+                        <SelectContent>
+                          {sizes?.length > 0 ? (
+                            sizes.map((sz, idx) => (
+                              <SelectItem key={idx} value={sz}>
+                                {sz}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-size" disabled>
+                              No size found
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
-                  {/* Barcode */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <Barcode className="w-4 h-4" />
-                      Barcode (Optional)
-                    </Label>
-                    <Input
-                      placeholder="Scan or enter barcode"
-                      className="focus:ring-2 focus:ring-primary/20 border-2 transition-all duration-200"
-                    />
+                  {/* SKU + Barcode (Same Line) */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-foreground">
+                        SKU
+                      </Label>
+                      <Input
+                        placeholder="Stock Keeping Unit"
+                        value={sku}
+                        onChange={(e) => setSku(e.target.value)}
+                        className="focus:ring-2 focus:ring-primary/20 border-2 transition-all duration-200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Barcode className="w-4 h-4" />
+                        Barcode (Optional)
+                      </Label>
+                      <Input
+                        placeholder="Scan or enter barcode"
+                        value={barcode}
+                        onChange={(e) => setBarcode(e.target.value)}
+                        className="focus:ring-2 focus:ring-primary/20 border-2 transition-all duration-200"
+                      />
+                    </div>
                   </div>
 
                   {/* Image Upload */}
@@ -560,7 +605,6 @@ const ProductInfo = () => {
                       </label>
                     </div>
                   </div>
-
                   <Button
                     disabled={loading}
                     className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium mt-4 flex items-center justify-center"
