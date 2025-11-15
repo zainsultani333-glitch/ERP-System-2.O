@@ -60,7 +60,7 @@ const StockPurchaseDetails = () => {
   const [unitCost, setUnitCost] = useState("");
   const [barcode, setBarcode] = useState("");
   const [purchaseItems, setPurchaseItems] = useState([]);
-  const [categoryInput, setCategoryInput] = useState("");
+  // const [categoryInput, setCategoryInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [summary, setSummary] = useState({
     totalItems: 0,
@@ -91,7 +91,8 @@ const StockPurchaseDetails = () => {
   const [selectedStock, setSelectedStock] = useState(null);
   const [editItemIndex, setEditItemIndex] = useState(null);
   const [isItemEditMode, setIsItemEditMode] = useState(false);
-
+  const [size, setSize] = useState("");
+  const [pdfFile, setPdfFile] = useState(null);
   const { token } = useAuth();
 
   const handleAddPurchaseItem = () => {
@@ -105,6 +106,7 @@ const StockPurchaseDetails = () => {
     const newItem = {
       itemId,
       itemName: selectedItemName,
+      size,
       description,
       quantity: Number(quantity),
       unitCost: Number(unitCost),
@@ -123,15 +125,15 @@ const StockPurchaseDetails = () => {
 
     // Reset form
     setItemId("");
+    setSize("");
     setDescription("");
     setQuantity("");
     setUnitCost("");
-    setBarcode("");
+    // setBarcode("");
 
     setEditItemIndex(null);
     setIsItemEditMode(false);
   };
-
 
   // Fetch stock data
   const fetchStock = async () => {
@@ -187,7 +189,6 @@ const StockPurchaseDetails = () => {
         setTimeout(() => {
           toast.error("Failed to fetch item names");
         }, 2000);
-
       }
     } catch (error) {
       console.error("Error fetching item names:", error);
@@ -540,7 +541,7 @@ const StockPurchaseDetails = () => {
     setDescription(item.description);
     setQuantity(item.quantity);
     setUnitCost(item.unitCost);
-    setBarcode(item.barcode);
+    // setBarcode(item.barcode);
 
     setEditItemIndex(index);
     setIsItemEditMode(true);
@@ -716,12 +717,9 @@ const StockPurchaseDetails = () => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-
                     {/* Tracking Number */}
                     <div className="space-y-2">
-                      <Label>
-                        Tracking Number
-                      </Label>
+                      <Label>Tracking Number</Label>
                       <Input
                         value={trackingNumber}
                         onChange={(e) => setTrackingNumber(e.target.value)}
@@ -730,15 +728,16 @@ const StockPurchaseDetails = () => {
                       />
                     </div>
                     {/* Category Input */}
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                       <Label>Category</Label>
                       <Input
+                        type="text"
+                        placeholder="Enter category"
                         value={categoryInput}
                         onChange={(e) => setCategoryInput(e.target.value)}
-                        placeholder="e.g., Electronics"
                         className="border-2"
                       />
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* ITEM SECTION */}
@@ -781,17 +780,22 @@ const StockPurchaseDetails = () => {
                         </Select>
                       </div>
 
-                      {/* Description */}
+                      {/* Sizes */}
                       <div className="space-y-2">
-                        <Label>
-                          SKU
-                        </Label>
-                        <Input
-                          value={description}
-                          onChange={(e) => setDescription(e.target.value)}
-                          placeholder="Good Lotion"
-                          className="border-2"
-                        />
+                        <Label>Size</Label>
+                        <Select onValueChange={(value) => setSize(value)}>
+                          <SelectTrigger className="border-2">
+                            <SelectValue placeholder="Select Size" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            <SelectItem value="small">Small</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="large">Large</SelectItem>
+                            <SelectItem value="xl">XL</SelectItem>
+                            <SelectItem value="xxl">XXL</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
@@ -812,9 +816,7 @@ const StockPurchaseDetails = () => {
 
                       {/* Unit Cost */}
                       <div className="space-y-2">
-                        <Label>
-                          Unit Cost
-                        </Label>
+                        <Label>Unit Cost</Label>
                         <Input
                           type="number"
                           value={unitCost}
@@ -824,27 +826,25 @@ const StockPurchaseDetails = () => {
                         />
                       </div>
 
+                      {/* Add Item Button */}
+                      <Button
+                        onClick={handleAddPurchaseItem}
+                        className="mt-8 w-full bg-primary text-white"
+                      >
+                        {isItemEditMode ? "Update Item" : "Add Item"}
+                      </Button>
+
                       {/* Barcode */}
-                      <div className="space-y-2">
-                        <Label>
-                          Barcode
-                        </Label>
+                      {/* <div className="space-y-2">
+                        <Label>Barcode</Label>
                         <Input
                           value={barcode}
                           onChange={(e) => setBarcode(e.target.value)}
                           placeholder="BRC-POND-001"
                           className="border-2"
                         />
-                      </div>
+                      </div> */}
                     </div>
-
-                    {/* Add Item Button */}
-                    <Button
-                      onClick={handleAddPurchaseItem}
-                      className="mt-4 w-full bg-primary text-white"
-                    >
-                      {isItemEditMode ? "Update Item" : "Add Item"}
-                    </Button>
 
                     {/* Display Added Items */}
                     {purchaseItems.length > 0 && (
@@ -854,6 +854,7 @@ const StockPurchaseDetails = () => {
                           <thead className="bg-gray-100">
                             <tr>
                               <th className="p-2 text-left">Item</th>
+                              <th className="p-2 text-left">Size</th>
                               <th className="p-2 text-left">Qty</th>
                               <th className="p-2 text-left">Unit Cost</th>
                               <th className="p-2 text-left">Total</th>
@@ -865,6 +866,7 @@ const StockPurchaseDetails = () => {
                             {purchaseItems.map((it, i) => (
                               <tr key={i} className="border-t">
                                 <td className="p-2">{it.itemName}</td>
+                                <td className="p-2">{it.size}</td>
                                 <td className="p-2">{it.quantity}</td>
                                 <td className="p-2">€{it.unitCost}</td>
                                 <td className="p-2 font-semibold">
@@ -930,6 +932,18 @@ const StockPurchaseDetails = () => {
                     )}
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="supplierInvoice">
+                      Supplier Invoice PDF
+                    </Label>
+                    <Input
+                      id="supplierInvoice"
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => setPdfFile(e.target.files[0])}
+                      className="border-2"
+                    />
+                  </div>
                   {/* SAVE BUTTON */}
                   <Button
                     disabled={saving}
@@ -960,8 +974,12 @@ const StockPurchaseDetails = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Total Items</p>
-                  <p className="text-2xl font-bold text-blue-900">{summary.totalItems || 0}</p>
+                  <p className="text-sm font-medium text-blue-700">
+                    Total Items
+                  </p>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {summary.totalItems || 0}
+                  </p>
                 </div>
                 <div className="p-2 bg-blue-500/10 rounded-lg">
                   <Package className="w-5 h-5 text-blue-600" />
@@ -974,7 +992,9 @@ const StockPurchaseDetails = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Total Stock Value</p>
+                  <p className="text-sm font-medium text-green-700">
+                    Total Stock Value
+                  </p>
                   <p className="text-2xl font-bold text-green-900">
                     € {(summary.totalStockValue ?? 0).toLocaleString()}
                   </p>
@@ -990,8 +1010,12 @@ const StockPurchaseDetails = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-amber-700">Low Stock Items</p>
-                  <p className="text-2xl font-bold text-amber-900">{summary.lowStockItems || 0}</p>
+                  <p className="text-sm font-medium text-amber-700">
+                    Low Stock Items
+                  </p>
+                  <p className="text-2xl font-bold text-amber-900">
+                    {summary.lowStockItems || 0}
+                  </p>
                 </div>
                 <div className="p-2 bg-amber-500/10 rounded-lg">
                   <AlertTriangle className="w-5 h-5 text-amber-600" />
@@ -1004,8 +1028,12 @@ const StockPurchaseDetails = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-700">Stores in Consignment</p>
-                  <p className="text-2xl font-bold text-purple-900">{summary.storesInConsignment || 0}</p>
+                  <p className="text-sm font-medium text-purple-700">
+                    Stores in Consignment
+                  </p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {summary.storesInConsignment || 0}
+                  </p>
                 </div>
                 <div className="p-2 bg-purple-500/10 rounded-lg">
                   <Store className="w-5 h-5 text-purple-600" />
@@ -1019,7 +1047,9 @@ const StockPurchaseDetails = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-700">Grand Total Pending</p>
+                  <p className="text-sm font-medium text-red-700">
+                    Grand Total Pending
+                  </p>
                   <p className="text-2xl font-bold text-red-900">
                     € {(summary.grandTotalPending ?? 0).toLocaleString()}
                   </p>
@@ -1036,8 +1066,12 @@ const StockPurchaseDetails = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-teal-700">Total Items Pending</p>
-                  <p className="text-2xl font-bold text-teal-900">{summary.totalItemsPending || 0}</p>
+                  <p className="text-sm font-medium text-teal-700">
+                    Total Items Pending
+                  </p>
+                  <p className="text-2xl font-bold text-teal-900">
+                    {summary.totalItemsPending || 0}
+                  </p>
                 </div>
                 <div className="p-2 bg-teal-500/10 rounded-lg">
                   <Package className="w-5 h-5 text-teal-600" />
@@ -1046,7 +1080,6 @@ const StockPurchaseDetails = () => {
             </CardContent>
           </Card>
         </div>
-
 
         {/* Search Section */}
         <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 shadow-sm hover:shadow-md transition-shadow duration-300">
@@ -1243,10 +1276,11 @@ const StockPurchaseDetails = () => {
                         {visibleFields.includes("status") && (
                           <td className="px-6 py-4">
                             <Badge
-                              className={`px-2 py-1 ${purchase.status === "Received"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-red-300 text-gray-600"
-                                }`}
+                              className={`px-2 py-1 ${
+                                purchase.status === "Received"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-300 text-gray-600"
+                              }`}
                             >
                               {purchase?.status}
                             </Badge>
@@ -1269,7 +1303,6 @@ const StockPurchaseDetails = () => {
                         {visibleFields.includes("actions") && (
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-1">
-
                               {/* VIEW (Always) */}
                               <Button
                                 variant="ghost"
@@ -1298,11 +1331,9 @@ const StockPurchaseDetails = () => {
                               >
                                 <Trash2 size={16} />
                               </Button>
-
                             </div>
                           </td>
                         )}
-
                       </tr>
                     ))
                   ) : (

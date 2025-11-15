@@ -107,6 +107,7 @@ const Invoice = () => {
 
   // Multiple items list
   const [invoiceItems, setInvoiceItems] = useState([]);
+  const [size, setSize] = useState("");
 
   // Auto calculate totals
   useEffect(() => {
@@ -147,7 +148,6 @@ const Invoice = () => {
     }
   };
 
-
   // Remove item from array
   const handleRemoveItem = (index) => {
     const updatedItems = [...invoiceItems];
@@ -171,8 +171,10 @@ const Invoice = () => {
         setInvoiceData(allInvoices);
 
         // Split into draft and final invoices
-        const drafts = allInvoices.filter(inv => inv.status === 'Draft' || !inv.status);
-        const finals = allInvoices.filter(inv => inv.status === "Final");
+        const drafts = allInvoices.filter(
+          (inv) => inv.status === "Draft" || !inv.status
+        );
+        const finals = allInvoices.filter((inv) => inv.status === "Final");
 
         setDraftInvoices(drafts);
         setFinalInvoices(finals);
@@ -294,20 +296,26 @@ const Invoice = () => {
       setCustomerVAT(fullInvoice.customerVAT || "");
       setVatRegime(fullInvoice.items?.[0]?.vatRegime || "Local");
       setStatus(fullInvoice.status || "Draft");
-      setInvoiceDate(fullInvoice.invoiceDate?.split('T')[0] || new Date().toISOString().split("T")[0]);
+      setInvoiceDate(
+        fullInvoice.invoiceDate?.split("T")[0] ||
+          new Date().toISOString().split("T")[0]
+      );
 
       // Set invoice items
       if (fullInvoice.items && fullInvoice.items.length > 0) {
-        const formattedItems = fullInvoice.items.map(item => ({
+        const formattedItems = fullInvoice.items.map((item) => ({
           itemId: item.itemId,
           description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           vatRegime: item.vatRegime,
           vatRate: item.vatRate,
-          totalExclVAT: item.totalExclVAT || (item.quantity * item.unitPrice),
-          vatAmount: item.vatAmount || (item.quantity * item.unitPrice * item.vatRate),
-          totalInclVAT: item.totalInclVAT || (item.quantity * item.unitPrice * (1 + item.vatRate))
+          totalExclVAT: item.totalExclVAT || item.quantity * item.unitPrice,
+          vatAmount:
+            item.vatAmount || item.quantity * item.unitPrice * item.vatRate,
+          totalInclVAT:
+            item.totalInclVAT ||
+            item.quantity * item.unitPrice * (1 + item.vatRate),
         }));
         setInvoiceItems(formattedItems);
       }
@@ -321,8 +329,6 @@ const Invoice = () => {
       toast.error("Error loading invoice for editing");
     }
   };
-
-
 
   const handleEditItem = (index, item) => {
     // Set editing index
@@ -338,7 +344,9 @@ const Invoice = () => {
 
     // Auto-calculate will handle the totals
 
-    toast.success("Item loaded for editing. Click 'Update Item' to save changes.");
+    toast.success(
+      "Item loaded for editing. Click 'Update Item' to save changes."
+    );
   };
 
   // Update handleAddItem to handle both add and update
@@ -348,7 +356,7 @@ const Invoice = () => {
       return;
     }
 
-    const selectedItem = itemsList.find(item => item._id === itemId);
+    const selectedItem = itemsList.find((item) => item._id === itemId);
 
     const newItem = {
       itemId,
@@ -360,6 +368,7 @@ const Invoice = () => {
       totalExclVAT,
       vatAmount,
       totalInclVAT,
+      size,
     };
 
     if (editingItemIndex !== null) {
@@ -430,24 +439,28 @@ const Invoice = () => {
         companyCode: "VE",
         invoiceDate: invoiceDate,
         customer: selectedCustomer,
-        items: invoiceItems.map(item => ({
+        items: invoiceItems.map((item) => ({
           itemId: item.itemId,
           description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           vatRegime: vatRegime,
-          vatRate: item.vatRate
-        }))
+          vatRate: item.vatRate,
+        })),
       };
 
       console.log("Updating invoice:", payload);
 
-      const response = await api.put(`/inventory/invoice/draft/${editingInvoiceId}`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
+      const response = await api.put(
+        `/inventory/invoice/draft/${editingInvoiceId}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (response.data.success) {
         toast.success("Invoice updated successfully!");
@@ -467,12 +480,15 @@ const Invoice = () => {
     try {
       toast.loading("Finalizing invoice...");
 
-      const response = await api.put(`/inventory/invoice/finalize/${invoiceId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
+      const response = await api.put(
+        `/inventory/invoice/finalize/${invoiceId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       toast.dismiss();
       if (response.data.success) {
@@ -490,7 +506,11 @@ const Invoice = () => {
 
   // Handle Delete Invoice
   const handleDeleteInvoice = async (invoiceId) => {
-    if (!confirm("Are you sure you want to delete this invoice? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this invoice? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -534,14 +554,14 @@ const Invoice = () => {
         companyCode: "VE",
         invoiceDate,
         customer: selectedCustomer,
-        items: invoiceItems.map(item => ({
+        items: invoiceItems.map((item) => ({
           itemId: item.itemId,
           description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           vatRegime,
-          vatRate: item.vatRate
-        }))
+          vatRate: item.vatRate,
+        })),
       };
 
       // Only send invoiceNo if it's Final AND available
@@ -592,22 +612,20 @@ const Invoice = () => {
           );
         } else {
           // Create new draft
-          response = await api.post(
-            `/inventory/invoice/draft`,
-            payload,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
+          response = await api.post(`/inventory/invoice/draft`, payload, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
         }
       }
 
       if (response.data.success) {
         toast.success(
-          `Invoice ${status === "Final" ? "finalized" : isEditMode ? "updated" : "saved"} successfully!`
+          `Invoice ${
+            status === "Final" ? "finalized" : isEditMode ? "updated" : "saved"
+          } successfully!`
         );
         setIsAddOpen(false);
         fetchInvoices();
@@ -619,7 +637,6 @@ const Invoice = () => {
       toast.error(error.response?.data?.message || "Error saving invoice");
     }
   };
-
 
   const filteredInvoice = invoiceData
     .map((inv) => ({
@@ -635,7 +652,7 @@ const Invoice = () => {
       totalExclVAT: inv.netTotal,
       vatAmount: inv.vatTotal,
       totalInclVAT: inv.grandTotal,
-      status: inv.status || 'draft'
+      status: inv.status || "draft",
     }))
     .filter(
       (invoice) =>
@@ -659,7 +676,7 @@ const Invoice = () => {
       totalExclVAT: inv.netTotal,
       vatAmount: inv.vatTotal,
       totalInclVAT: inv.grandTotal,
-      status: 'draft'
+      status: "draft",
     }))
     .filter(
       (invoice) =>
@@ -683,7 +700,7 @@ const Invoice = () => {
       totalExclVAT: inv.netTotal,
       vatAmount: inv.vatTotal,
       totalInclVAT: inv.grandTotal,
-      status: 'final'
+      status: "final",
     }))
     .filter(
       (invoice) =>
@@ -824,8 +841,9 @@ const Invoice = () => {
         const payload = {
           to: invoice.customer?.email || "emanali262770@gmail.com",
           subject: `Your Invoice ${invoice.invoiceNo} from VESTIAIRE ST. HONORÉ`,
-          message: `Hello ${invoice.customer?.customerName || invoice.customerName || "Customer"
-            }, please find your invoice attached.`,
+          message: `Hello ${
+            invoice.customer?.customerName || invoice.customerName || "Customer"
+          }, please find your invoice attached.`,
         };
 
         const response = await api.post(
@@ -850,7 +868,8 @@ const Invoice = () => {
       const phone = invoice.phoneNumber || "03184486979";
 
       const msg = encodeURIComponent(
-        `Hello ${invoice.customerName || "Customer"}, your invoice ${invoice.invoiceNo
+        `Hello ${invoice.customerName || "Customer"}, your invoice ${
+          invoice.invoiceNo
         } is ready.`
       );
 
@@ -901,7 +920,7 @@ const Invoice = () => {
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
                     <FileSignature className="w-5 h-5 text-primary" />
-                    {isEditMode ? 'Edit Invoice' : 'Add New Invoice'}
+                    {isEditMode ? "Edit Invoice" : "Add New Invoice"}
                   </DialogTitle>
                 </DialogHeader>
 
@@ -924,10 +943,18 @@ const Invoice = () => {
                     <div className="space-y-2">
                       <Label>Invoice No</Label>
                       <Input
-                        value={status === "Final" ? invoiceNo : "Auto-generated when finalized"}
+                        value={
+                          status === "Final"
+                            ? invoiceNo
+                            : "Auto-generated when finalized"
+                        }
                         readOnly
                         className="border-2 bg-gray-100 cursor-not-allowed"
-                        placeholder={status === "Draft" ? "Will be generated when finalized" : "Enter invoice number"}
+                        placeholder={
+                          status === "Draft"
+                            ? "Will be generated when finalized"
+                            : "Enter invoice number"
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -940,7 +967,6 @@ const Invoice = () => {
                       />
                     </div>
                   </div>
-
 
                   {/* Customer + VAT Number */}
                   <div className="grid grid-cols-2 gap-4">
@@ -995,44 +1021,71 @@ const Invoice = () => {
                   <div className="mt-6 p-4 rounded-lg border bg-muted/30">
                     <h3 className="font-semibold mb-3">Add Item</h3>
 
-                    {/* Item Selection */}
-                    <div className="space-y-2">
-                      <Label>Item</Label>
-                      {itemsLoading ? (
-                        <div className="flex justify-center items-center h-10 border rounded-lg bg-muted/30">
-                          <Loader className="w-4 h-4 text-primary animate-spin mr-2" />
-                          Loading items...
-                        </div>
-                      ) : (
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      {/* Item Selection */}
+                      <div className="space-y-2">
+                        <Label>Item</Label>
+                        {itemsLoading ? (
+                          <div className="flex justify-center items-center h-10 border rounded-lg bg-muted/30">
+                            <Loader className="w-4 h-4 text-primary animate-spin mr-2" />
+                            Loading items...
+                          </div>
+                        ) : (
+                          <Select
+                            value={itemId}
+                            onValueChange={(value) => {
+                              setItemId(value);
+                              const selectedItem = itemsList.find(
+                                (item) => item._id === value
+                              );
+                              if (selectedItem) {
+                                setDescription(
+                                  selectedItem.description ||
+                                    selectedItem.itemName
+                                );
+                                setUnitPrice(selectedItem.sellingPrice || 0);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="border-2">
+                              <SelectValue placeholder="Select item" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {itemsList.length > 0 ? (
+                                itemsList.map((item) => (
+                                  <SelectItem key={item._id} value={item._id}>
+                                    {item.itemCode} - {item.itemName}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem disabled>No items found</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+
+                      {/* Size Selection */}
+                      <div className="space-y-2">
+                        <Label>Size</Label>
                         <Select
-                          value={itemId}
-                          onValueChange={(value) => {
-                            setItemId(value);
-                            const selectedItem = itemsList.find(item => item._id === value);
-                            if (selectedItem) {
-                              setDescription(selectedItem.description || selectedItem.itemName);
-                              setUnitPrice(selectedItem.sellingPrice || 0);
-                            }
-                          }}
+                          value={size}
+                          onValueChange={(value) => setSize(value)}
                         >
                           <SelectTrigger className="border-2">
-                            <SelectValue placeholder="Select item" />
+                            <SelectValue placeholder="Select size" />
                           </SelectTrigger>
                           <SelectContent>
-                            {itemsList.length > 0 ? (
-                              itemsList.map((item) => (
-                                <SelectItem key={item._id} value={item._id}>
-                                  {item.itemCode} - {item.itemName}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem disabled>No items found</SelectItem>
-                            )}
+                            <SelectItem value="Small">Small</SelectItem>
+                            <SelectItem value="Medium">Medium</SelectItem>
+                            <SelectItem value="Large">Large</SelectItem>
+                            <SelectItem value="Extra Large">
+                              Extra Large
+                            </SelectItem>
                           </SelectContent>
                         </Select>
-                      )}
+                      </div>
                     </div>
-
                     {/* Qty - Price - VAT Type */}
                     <div className="grid grid-cols-3 gap-4 mt-4">
                       {/* Quantity */}
@@ -1059,7 +1112,7 @@ const Invoice = () => {
 
                       {/* VAT TYPE */}
                       <div className="space-y-2">
-                        <Label>VAT Type</Label>
+                        <Label>VAT Regime</Label>
                         <Select
                           value={vatRegime}
                           onValueChange={(value) => {
@@ -1153,6 +1206,7 @@ const Invoice = () => {
                           <thead className="bg-gray-100">
                             <tr>
                               <th className="p-2 text-left">Item</th>
+                              <th className="p-2 text-left">Size</th>
                               <th className="p-2 text-left">Qty</th>
                               <th className="p-2 text-left">Price</th>
                               <th className="p-2 text-left">VAT Rate</th>
@@ -1163,14 +1217,19 @@ const Invoice = () => {
                           </thead>
                           <tbody>
                             {invoiceItems.map((it, i) => {
-                              const itemName = itemsList.find(item => item._id === it.itemId)?.itemName || it.itemId;
+                              const itemName =
+                                itemsList.find((item) => item._id === it.itemId)
+                                  ?.itemName || it.itemId;
                               return (
                                 <tr key={i} className="border-t">
                                   <td className="p-2">{itemName}</td>
+                                  <td className="p-2">{it.size}</td>
                                   <td className="p-2">{it.quantity}</td>
                                   <td className="p-2">€{it.unitPrice}</td>
-                                  <td className="p-2">{(it.vatRate * 100)}%</td>
-                                  <td className="p-2 font-semibold">€{it.totalInclVAT?.toFixed(2)}</td>
+                                  <td className="p-2">{it.vatRate * 100}%</td>
+                                  <td className="p-2 font-semibold">
+                                    €{it.totalInclVAT?.toFixed(2)}
+                                  </td>
                                   <td className="p-2">
                                     <div className="flex gap-1">
                                       {/* Edit Button */}
@@ -1201,9 +1260,17 @@ const Invoice = () => {
                             })}
                             {/* Total Summary */}
                             <tr className="border-t bg-gray-50 font-semibold">
-                              <td colSpan="4" className="p-2 text-right">Grand Total:</td>
+                              <td colSpan="4" className="p-2 text-right">
+                                Grand Total:
+                              </td>
                               <td className="p-2">
-                                €{invoiceItems.reduce((sum, item) => sum + item.totalInclVAT, 0).toFixed(2)}
+                                €
+                                {invoiceItems
+                                  .reduce(
+                                    (sum, item) => sum + item.totalInclVAT,
+                                    0
+                                  )
+                                  .toFixed(2)}
                               </td>
                               <td></td>
                             </tr>
@@ -1218,7 +1285,7 @@ const Invoice = () => {
                     className="w-full bg-gradient-to-r from-primary to-primary/90 py-3 text-base font-medium"
                     onClick={handleSaveInvoice}
                   >
-                    {isEditMode ? 'Update Invoice' : 'Save Invoice'}
+                    {isEditMode ? "Update Invoice" : "Save Invoice"}
                   </Button>
                 </div>
               </DialogContent>
@@ -1451,10 +1518,11 @@ const Invoice = () => {
                         </td>
                         <td className="px-6 py-4 font-normal text-sm text-center">
                           <div
-                            className={`px-2 py-1 rounded-full ${item.status === "Final"
+                            className={`px-2 py-1 rounded-full ${
+                              item.status === "Final"
                                 ? "bg-green-200 text-green-700"
                                 : "bg-orange-300 text-white"
-                              }`}
+                            }`}
                           >
                             {item?.status}
                           </div>
@@ -1486,8 +1554,6 @@ const Invoice = () => {
                                 >
                                   <Edit className="w-4 h-4" />
                                 </Button>
-
-
                               </>
                             )}
 
@@ -1509,17 +1575,24 @@ const Invoice = () => {
                                       )}
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="w-40"
+                                  >
                                     <DropdownMenuItem
                                       className="flex items-center gap-2 cursor-pointer"
-                                      onClick={() => handleSendOption("whatsapp", item)}
+                                      onClick={() =>
+                                        handleSendOption("whatsapp", item)
+                                      }
                                     >
                                       <MessageCircle className="w-4 h-4 text-green-600" />
                                       <span>WhatsApp</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="flex items-center gap-2 cursor-pointer"
-                                      onClick={() => handleSendOption("email", item)}
+                                      onClick={() =>
+                                        handleSendOption("email", item)
+                                      }
                                     >
                                       <Mail className="w-4 h-4 text-blue-600" />
                                       <span>Email</span>
@@ -1543,7 +1616,7 @@ const Invoice = () => {
                             {activeTab === "all" && (
                               <>
                                 {/* Conditional actions based on status for "all" tab */}
-                                {item.status === 'Draft' && (
+                                {item.status === "Draft" && (
                                   <>
                                     {/* ✏️ Edit - Only for drafts */}
                                     <Button
@@ -1555,12 +1628,10 @@ const Invoice = () => {
                                     >
                                       <Edit className="w-4 h-4" />
                                     </Button>
-
-
                                   </>
                                 )}
 
-                                {item.status === 'Final' && (
+                                {item.status === "Final" && (
                                   <>
                                     {/* ✉️ Share Dropdown - Only for finals */}
                                     <DropdownMenu>
@@ -1578,17 +1649,24 @@ const Invoice = () => {
                                           )}
                                         </Button>
                                       </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end" className="w-40">
+                                      <DropdownMenuContent
+                                        align="end"
+                                        className="w-40"
+                                      >
                                         <DropdownMenuItem
                                           className="flex items-center gap-2 cursor-pointer"
-                                          onClick={() => handleSendOption("whatsapp", item)}
+                                          onClick={() =>
+                                            handleSendOption("whatsapp", item)
+                                          }
                                         >
                                           <MessageCircle className="w-4 h-4 text-green-600" />
                                           <span>WhatsApp</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                           className="flex items-center gap-2 cursor-pointer"
-                                          onClick={() => handleSendOption("email", item)}
+                                          onClick={() =>
+                                            handleSendOption("email", item)
+                                          }
                                         >
                                           <Mail className="w-4 h-4 text-blue-600" />
                                           <span>Email</span>
