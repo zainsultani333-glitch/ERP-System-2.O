@@ -155,6 +155,7 @@ const ProductInfo = () => {
       setSizes(cat.sizes); // expects array like ["XL", "L", "M"]
     }
   }, [selectedCategory, categories]);
+// console.log({categories});
 
   const filteredProducts = products.filter(
     (item) =>

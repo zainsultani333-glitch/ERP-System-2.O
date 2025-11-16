@@ -1100,7 +1100,7 @@ const StockPurchaseDetails = () => {
         </Card>
 
         {/* Stock Table with Actions Field */}
-        {/* Stock Table with Actions Field */}
+      
         <Card className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 pb-4">
             <div className="flex items-center justify-between">
@@ -1226,7 +1226,7 @@ const StockPurchaseDetails = () => {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-border/30">
+                <tbody className="divide-y whitespace-nowrap divide-border/30">
                   {loading ? (
                     <tr>
                       <td colSpan="10" className="py-20">

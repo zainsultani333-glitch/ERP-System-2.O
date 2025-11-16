@@ -362,7 +362,7 @@ const CategoryPage = () => {
                 <div className="space-y-6 pt-4">
                   {/* Logo / Image */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Label className="text-sm font-medium  text-foreground flex items-center gap-2">
                       Logo / Image
                     </Label>
 
@@ -373,7 +373,7 @@ const CategoryPage = () => {
                         <img
                           src={newCategory.logo}
                           alt="Existing Logo"
-                          className="w-20 h-20 object-cover rounded-lg mb-3 border"
+                          className="w-20 h-20 object-cover cursor-pointer rounded-lg mb-3 border"
                         />
                       )}
 
@@ -382,12 +382,13 @@ const CategoryPage = () => {
                       <img
                         src={URL.createObjectURL(newCategory.logoFile)}
                         alt="New Logo Preview"
-                        className="w-20 h-20 object-cover rounded-lg mb-3 border"
+                        className="w-20 h-20  object-cover rounded-lg mb-3 border"
                       />
                     )}
 
                     <Input
                       type="file"
+                      className="cursor-pointer"
                       accept="image/*"
                       onChange={(e) =>
                         setNewCategory({
