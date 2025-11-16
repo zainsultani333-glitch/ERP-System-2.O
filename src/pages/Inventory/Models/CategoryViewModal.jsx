@@ -37,8 +37,7 @@ export default function CategoryViewDialog({ isOpen, onOpenChange, category }) {
                                 <p className="font-medium text-muted-foreground">Description:</p>
                                 <p className="font-semibold break-words">{category.description || "No description available"}</p>
 
-                                <p className="font-medium text-muted-foreground">Created At:</p>
-                                <p className="font-semibold">{category.createdAt}</p>
+                              
                             </div>
                         </div>
                     </div>

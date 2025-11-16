@@ -209,17 +209,17 @@ const WareHouse = () => {
 
   // ------------------------ DELETE WAREHOUSE ------------------------
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this warehouse?")) return;
+   
 
     try {
       setLoading(true);
       const response = await api.delete(`/warehouses/${id}`);
 
       if (response.data.success) {
-        toast.success("✅ Warehouse deleted successfully!");
+        toast.success(" Warehouse deleted successfully!");
         fetchWareHouse(); // Refresh the list
       } else {
-        toast.error("❌ Failed to delete warehouse!");
+        toast.error(" Failed to delete warehouse!");
       }
     } catch (error) {
       console.error("❌ Error deleting warehouse:", error);

@@ -55,6 +55,7 @@ const SupplierInformation = () => {
   const [form, setForm] = useState({
     supplierName: "",
     company: "",
+    vatPrefix: "",
     address: "",
     vatNumber: "",
     email: "",
@@ -98,6 +99,7 @@ const SupplierInformation = () => {
       company: "",
       address: "",
       vatNumber: "",
+      vatPrefix: "",
       email: "",
       phone: "",
     });
@@ -152,9 +154,13 @@ const SupplierInformation = () => {
   const handleSaveSupplier = async () => {
     try {
       setSaving(true);
+      if (!form.supplierName.trim()) {
+        toast.error("Supplier name is required!");
+        return;
+      }
 
-      if (!form.supplierName) {
-        toast.error("Name is required!");
+      if (!form.company.trim()) {
+        toast.error("Company name is required!");
         return;
       }
       if (form.email && !/\S+@\S+\.\S+/.test(form.email)) {
@@ -166,7 +172,9 @@ const SupplierInformation = () => {
         supplierName: form.supplierName,
         company: form.company,
         address: form.address,
-        vatNumber: form.vatNumber || "",
+        vatNumber: form.vatPrefix
+          ? `${form.vatPrefix}${form.vatNumber}`
+          : form.vatNumber || "",
         email: form.email || "",
         phone: form.phone || "",
       };
@@ -193,6 +201,7 @@ const SupplierInformation = () => {
           company: "",
           address: "",
           vatNumber: "",
+          vatPrefix: "",
           email: "",
           phone: "",
         });
@@ -215,12 +224,13 @@ const SupplierInformation = () => {
       toast.error("Supplier not found!");
       return;
     }
-
+    const vat = supplier.vatNumber || "";
     setForm({
       supplierName: supplier.supplierName || "",
       company: supplier.company || "",
       address: supplier.address || "",
-      vatNumber: supplier.vatNumber || "",
+      vatPrefix: vat.substring(0, 2) || "",
+      vatNumber: vat.substring(2) || "",
       email: supplier.email || "",
       phone: supplier.phone || "",
     });
@@ -316,7 +326,9 @@ const SupplierInformation = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Company</Label>
+                      <Label>
+                        Company <span className="text-red-500">*</span>{" "}
+                      </Label>
                       <Input
                         placeholder="e.g. ABC Distributors Ltd."
                         value={form.company}
@@ -487,6 +499,7 @@ const SupplierInformation = () => {
         </Card>
 
         {/* Table */}
+        {/* Table */}
         <Card className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 pb-4">
             <div className="flex items-center justify-between">
@@ -494,13 +507,15 @@ const SupplierInformation = () => {
                 <Warehouse className="w-5 h-5 text-primary" />
                 Supplier Records
               </CardTitle>
+
               <div className="flex items-center gap-3">
                 <Badge
-                  variant="primary"
+                  variant="secondary"
                   className="bg-primary/10 text-primary border-primary/20"
                 >
                   {filteredSuppliers.length} entries
                 </Badge>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -513,167 +528,176 @@ const SupplierInformation = () => {
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent md:overflow-x-visible">
-            <table className="w-full text-sm table-auto md:table-fixed">
-              <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
-                <tr>
-                  {visibleFields.includes("sr") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[60px]">
-                      Sr
-                    </th>
-                  )}
-                  {visibleFields.includes("supplierName") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[120px]">
-                      Supplier Name
-                    </th>
-                  )}
-                  {visibleFields.includes("company") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[130px]">
-                      Company
-                    </th>
-                  )}
-                  {visibleFields.includes("address") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[180px]">
-                      Address
-                    </th>
-                  )}
-                  {visibleFields.includes("vatNumber") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[100px]">
-                      VAT Number
-                    </th>
-                  )}
-                  {visibleFields.includes("avgPurchasePrice") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[140px]">
-                      Avg Purchase Price
-                    </th>
-                  )}
-                  {visibleFields.includes("totalSpendings") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[140px]">
-                      Total Spendings
-                    </th>
-                  )}
-                  {visibleFields.includes("orders") && (
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[120px]">
-                      Orders
-                    </th>
-                  )}
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-foreground/80 uppercase tracking-wider whitespace-nowrap w-[100px]">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-border/30">
-                {loading ? (
+          <CardContent className="p-0">
+            <div className="overflow-x-auto max-w-full">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r whitespace-nowrap from-muted/40 to-muted/20 border-b border-border/50">
                   <tr>
-                    <td
-                      colSpan={visibleFields.length + 1}
-                      className="py-20 text-center"
-                    >
-                      <div className="flex flex-col items-center justify-center">
-                        <Loader className="w-10 h-10 text-primary animate-spin mb-3" />
-                        <p className="text-muted-foreground">
-                          Loading suppliers...
-                        </p>
-                      </div>
-                    </td>
+                    {visibleFields.includes("sr") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Sr
+                      </th>
+                    )}
+
+                    {visibleFields.includes("supplierName") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Supplier Name
+                      </th>
+                    )}
+
+                    {visibleFields.includes("company") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Company
+                      </th>
+                    )}
+
+                    {visibleFields.includes("address") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Address
+                      </th>
+                    )}
+
+                    {visibleFields.includes("vatNumber") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        VAT Number
+                      </th>
+                    )}
+
+                    {visibleFields.includes("avgPurchasePrice") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Avg Purchase Price
+                      </th>
+                    )}
+
+                    {visibleFields.includes("totalSpendings") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Total Spendings
+                      </th>
+                    )}
+
+                    {visibleFields.includes("orders") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                        Orders
+                      </th>
+                    )}
+
+                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ) : currentSuppliers.length > 0 ? (
-                  currentSuppliers.map((s, index) => (
-                    <tr
-                      key={s._id}
-                      className="group hover:bg-primary/5 transition-all duration-300"
-                    >
-                      {visibleFields.includes("sr") && (
-                        <td className="px-6 py-4 font-semibold whitespace-nowrap">
-                          {startIndex + index + 1}
-                        </td>
-                      )}
-                      {visibleFields.includes("supplierName") && (
-                        <td className="px-6 py-4 font-semibold whitespace-nowrap max-w-[120px] truncate">
-                          {s.supplierName || "-"}
-                        </td>
-                      )}
-                      {visibleFields.includes("company") && (
-                        <td className="px-6 py-4 whitespace-nowrap max-w-[130px] truncate">
-                          {s.company || "-"}
-                        </td>
-                      )}
-                      {visibleFields.includes("address") && (
-                        <td className="px-6 py-4 whitespace-nowrap max-w-[200px] truncate">
-                          {s.address || "-"}
-                        </td>
-                      )}
-                      {visibleFields.includes("vatNumber") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {s.vatNumber || "-"}
-                        </td>
-                      )}
-                      {visibleFields.includes("avgPurchasePrice") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          €{s.avgPurchasePrice || 0}
-                        </td>
-                      )}
-                      {visibleFields.includes("totalSpendings") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          €{s.totalSpendings || 0}
-                        </td>
-                      )}
-                      {visibleFields.includes("orders") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {s.numberOfOrders || 0}
-                        </td>
-                      )}
-                      <td className="px-4 py-2 flex items-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleView(s._id)}
-                          title="View"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(s._id)}
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(s._id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                </thead>
+
+                <tbody className="divide-y divide-border/30">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={visibleFields.length + 1} className="py-20">
+                        <div className="flex flex-col items-center justify-center w-full">
+                          <Loader className="w-10 h-10 text-primary animate-spin mb-3" />
+                        </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={visibleFields.length + 1}
-                      className="text-center py-12"
-                    >
-                      <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                      <p className="text-muted-foreground font-medium text-lg">
-                        No suppliers found
-                      </p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  ) : currentSuppliers.length > 0 ? (
+                    currentSuppliers.map((s, index) => (
+                      <tr
+                        key={s._id}
+                        className="group hover:bg-primary/5 transition-all duration-300"
+                      >
+                        {visibleFields.includes("sr") && (
+                          <td className="px-6 py-4">
+                            {startIndex + index + 1}
+                          </td>
+                        )}
 
-            <Pagination
-              currentPage={currentPage}
-              totalItems={filteredSuppliers.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-            />
+                        {visibleFields.includes("supplierName") && (
+                          <td className="px-6 py-4 font-semibold truncate max-w-[150px]">
+                            {s.supplierName || "-"}
+                          </td>
+                        )}
+
+                        {visibleFields.includes("company") && (
+                          <td className="px-6 py-4 truncate max-w-[150px]">
+                            {s.company || "-"}
+                          </td>
+                        )}
+
+                        {visibleFields.includes("address") && (
+                          <td className="px-6 py-4 truncate max-w-[200px]">
+                            {s.address || "-"}
+                          </td>
+                        )}
+
+                        {visibleFields.includes("vatNumber") && (
+                          <td className="px-6 py-4">{s.vatNumber || "-"}</td>
+                        )}
+
+                        {visibleFields.includes("avgPurchasePrice") && (
+                          <td className="px-6 py-4">
+                            €{(s.avgPurchasePrice || 0).toLocaleString()}
+                          </td>
+                        )}
+
+                        {visibleFields.includes("totalSpendings") && (
+                          <td className="px-6 py-4">
+                            €{(s.totalSpendings || 0).toLocaleString()}
+                          </td>
+                        )}
+
+                        {visibleFields.includes("orders") && (
+                          <td className="px-6 py-4">{s.numberOfOrders || 0}</td>
+                        )}
+
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleView(s._id)}
+                            >
+                              <Eye size={16} />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(s._id)}
+                            >
+                              <Edit size={16} />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(s._id)}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={visibleFields.length + 1}
+                        className="text-center py-12"
+                      >
+                        <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                        <p className="text-muted-foreground font-medium text-lg">
+                          No suppliers found
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredSuppliers.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>

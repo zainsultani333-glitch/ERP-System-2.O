@@ -276,7 +276,10 @@ const CustomerDefinition = () => {
         email: newCustomer.email,
         billingAddress: newCustomer.billingAddress,
         country: newCustomer.country,
-        vatNumber: newCustomer.vatNumber,
+        vatNumber:
+          newCustomer.customerType === "Company"
+            ? `${newCustomer.vatPrefix || ""}${newCustomer.vatNumber || ""}`
+            : "",
         customerType: newCustomer.customerType,
         vatRegime: newCustomer.vatRegime,
         defaultVatRate: newCustomer.defaultVatRate,
@@ -322,7 +325,15 @@ const CustomerDefinition = () => {
   const handleEdit = (id) => {
     const customer = customerList.find((c) => c.id === id);
     if (!customer) return toast.error("Customer not found!");
-    console.log(customer);
+
+    // --- SPLIT VAT NUMBER (IF EXISTS) ---
+    let vatPrefix = "";
+    let vatNumeric = "";
+
+    if (customer.vatNumber && customer.vatNumber.length > 2) {
+      vatPrefix = customer.vatNumber.substring(0, 2); // first 2 chars (letters)
+      vatNumeric = customer.vatNumber.substring(2); // remaining digits
+    }
 
     setNewCustomer({
       customerCode: customer.customerCode,
@@ -331,7 +342,8 @@ const CustomerDefinition = () => {
       email: customer.email,
       billingAddress: customer.billingAddress,
       country: customer.country,
-      vatNumber: customer.vatNumber,
+      vatPrefix: vatPrefix, // <-- ADD THIS
+      vatNumber: vatNumeric, // <-- ADD THIS
       customerType: customer.customerType,
       vatRegime: customer.vatRegime,
       defaultVatRate: customer.defaultVatRate,
@@ -402,11 +414,17 @@ const CustomerDefinition = () => {
             </Button>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
+                <Button
+                  onClick={() => {
+                    clearForm(); // RESET ALL FIELDS
+                    setEditingCustomer(null);
+                  }}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Customer
                 </Button>
               </DialogTrigger>
+
               <DialogContent className="max-w-2xl max-h-full overflow-y-scroll bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
@@ -616,21 +634,22 @@ const CustomerDefinition = () => {
 
                           {/* VAT Number Input */}
                           <Input
-                            placeholder="Enter VAT Number"
                             value={newCustomer.vatNumber}
-                            onChange={(e) =>
+                            className="border-0 rounded-none h-[42px] flex-1"
+                            onChange={(e) => {
+                              const onlyNumbers = e.target.value.replace(
+                                /[^0-9]/g,
+                                ""
+                              );
                               setNewCustomer({
                                 ...newCustomer,
-                                vatNumber: e.target.value,
-                              })
-                            }
-                            className="border-0 rounded-none h-[42px] flex-1"
+                                vatNumber: onlyNumbers,
+                              });
+                            }}
                           />
                         </div>
                       </div>
                     )}
-
-                   
 
                     {/* Default VAT Rate */}
                     <div className="space-y-2">
