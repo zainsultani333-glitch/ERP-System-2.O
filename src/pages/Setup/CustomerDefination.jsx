@@ -30,7 +30,7 @@ import {
   UserPlus,
   UserCheck,
 } from "lucide-react";
-import { toast } from "sonner";
+
 import CustomerViewModal from "../Inventory/Models/CustomerDefinationModal";
 import { Loader } from "lucide-react";
 import Pagination from "../../components/Pagination";
@@ -48,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import api from "../../Api/AxiosInstance";
+import { toast } from "sonner";
 
 const europeanCountries = [
   "Albania",
@@ -301,7 +302,8 @@ const CustomerDefinition = () => {
       fetchCustomerList();
     } catch (error) {
       console.error("Failed to save customer:", error);
-      toast.error("Failed to save customer");
+      toast.error(error?.response?.data?.message || "Something went wrong!");
+
     } finally {
       setSaving(false);
     }
@@ -470,7 +472,7 @@ const CustomerDefinition = () => {
                     {/* Phone Number */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium flex items-center gap-2">
-                        Phone Number
+                        Phone Number (Without Country code)
                       </Label>
                       <Input
                         placeholder="Enter phone number"

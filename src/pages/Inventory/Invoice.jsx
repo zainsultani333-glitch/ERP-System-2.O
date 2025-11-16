@@ -305,7 +305,7 @@ const Invoice = () => {
       // Set invoice items
       if (fullInvoice.items && fullInvoice.items.length > 0) {
         const formattedItems = fullInvoice.items.map((item) => ({
-          itemId: item.itemId,
+         itemId: item.itemId?._id || item.itemId,
           size: item.size,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -894,7 +894,7 @@ const Invoice = () => {
       toast.success("Redirecting to WhatsApp...");
     }
   };
-  console.log({ availableSizes });
+  console.log({ finalInvoices,draftInvoices });
 
   return (
     <DashboardLayout>
