@@ -369,12 +369,12 @@ const TransactionTracking = () => {
                         )}
                         {visibleFields.includes("lastSaleDate") && (
                           <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px] text-sm">
-                            {item.lastSaleDate || "-"}
+                            {new Date(item.lastSaleDate).toLocaleDateString() || "-"}
                           </td>
                         )}
                         {visibleFields.includes("lastPurchaseDate") && (
                           <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px] text-sm">
-                            {item.lastPurchaseDate || "-"}
+                            {new Date(item.lastPurchaseDate).toLocaleDateString() || "-"}
                           </td>
                         )}
                         <td className="px-6 py-4">

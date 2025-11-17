@@ -1439,7 +1439,7 @@ const Invoice = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <Input
-                placeholder="Search by item or description..."
+                placeholder="Search by item "
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50 bg-background/80"
                 value={searchTerm}
                 onChange={(e) => {
@@ -1513,7 +1513,7 @@ const Invoice = () => {
                       Item / Product
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                      Description
+                      Size
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                       Quantity

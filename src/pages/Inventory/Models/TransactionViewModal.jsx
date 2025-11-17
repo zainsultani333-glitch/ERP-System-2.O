@@ -48,12 +48,7 @@ const TransactionViewModal = ({ isOpen, onClose, transaction }) => {
                   : "-"}
               </p>
 
-              <p className="font-medium text-muted-foreground">Created At:</p>
-              <p className="font-semibold">
-                {transaction.createdAt
-                  ? new Date(transaction.createdAt).toLocaleDateString()
-                  : "-"}
-              </p>
+            
             </div>
           </div>
         ) : (
