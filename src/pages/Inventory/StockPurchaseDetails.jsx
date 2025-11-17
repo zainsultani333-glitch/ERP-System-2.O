@@ -74,7 +74,6 @@ const StockPurchaseDetails = () => {
   });
   const [itemNames, setItemNames] = useState([]);
   const [itemNameLoading, setItemNameLoading] = useState(false);
-  const [selectedItem, setSelectedItem] = useState("");
   const [warehouses, setWarehouses] = useState([]);
   const [warehouseLoading, setWarehouseLoading] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
@@ -85,6 +84,7 @@ const StockPurchaseDetails = () => {
   const [stockData, setStockData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pdfRemoved, setPdfRemoved] = useState(false);
 
   const itemsPerPage = 8;
 
@@ -251,7 +251,7 @@ const StockPurchaseDetails = () => {
       const res = await api.get(`/categories/sizes/${category}`);
 
       if (res.data.success) {
-        setSizesList(res.data.data.sizes || []);
+        setSizesList((res.data.data.sizes || []).map((s) => s.size));
       } else {
         setSizesList([]);
       }
@@ -381,7 +381,11 @@ const StockPurchaseDetails = () => {
 
       // Supplier Invoice PDF
       if (pdfFile) {
+        // user uploaded new PDF
         formData.append("supplierInvoice", pdfFile);
+      } else if (isEditMode && pdfRemoved) {
+        // user removed existing PDF → send empty string to remove it
+        formData.append("supplierInvoice", "");
       }
 
       let res;
@@ -618,7 +622,8 @@ const StockPurchaseDetails = () => {
                         value={purchaseNo}
                         onChange={(e) => setPurchaseNo(e.target.value)}
                         placeholder="PUR-001"
-                        className="border-2"
+                        readOnly
+                        className="border-2  bg-muted/50"
                       />
                     </div>
 
@@ -944,6 +949,18 @@ const StockPurchaseDetails = () => {
                         <span className="text-sm font-medium">
                           {selectedExistingPdf.originalName}
                         </span>
+
+                        {/* ❌ Remove PDF Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedExistingPdf(null);
+                            setPdfFile(null);
+                            setPdfRemoved(true); // 🔥 VERY IMPORTANT
+                          }}
+                          className="text-red-500 hover:text-red-700 font-bold text-lg"
+                        >
+                          ✕
+                        </button>
                       </div>
                     )}
 

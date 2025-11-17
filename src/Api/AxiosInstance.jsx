@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://erp-system-backend-2-0.onrender.com/api", // your backend base URL
+  baseURL: import.meta.env.VITE_BASE_URL, // your backend base URL
   withCredentials: true,
 });
 

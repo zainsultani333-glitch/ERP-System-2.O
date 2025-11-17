@@ -185,8 +185,6 @@ const ProductInfo = () => {
     "itemName",
     "sku",
     "category",
-    "unit",
-    "size",
     "barcode",
   ]);
 
@@ -690,16 +688,8 @@ const ProductInfo = () => {
                         Category
                       </th>
                     )}
-                    {/* {visibleFields.includes("unit") && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        size
-                      </th>
-                    )} */}
-                    {visibleFields.includes("size") && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Size
-                      </th>
-                    )}
+                    
+                  
                     {visibleFields.includes("barcode") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                         Barcode
@@ -787,17 +777,7 @@ const ProductInfo = () => {
                           </td>
                         )}
 
-                        {/* {visibleFields.includes("unit") && (
-                          <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                            <div className="font-medium bg-muted/30 text-foreground px-3 py-1 rounded-full text-sm border border-border inline-block">
-                              {item.unit || "-"}
-                            </div>
-                          </td>
-                        )} */}
-
-                        {visibleFields.includes("size") && (
-                          <td className="px-6 py-4">{item.size || "-"}</td>
-                        )}
+                       
 
                         {visibleFields.includes("barcode") && (
                           <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,41 +38,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import api from "../../Api/AxiosInstance";
+import Pagination from "../../components/Pagination";
 
 const ManageCompanies = () => {
   // ----- State Hooks -----
-  const [companies, setCompanies] = useState([
-    {
-      id: 1,
-      logo: "https://ui-avatars.com/api/?name=Tech+Corp",
-      name: "Tech Corp Solutions",
-      email: "info@techcorp.com",
-      contact: "+92 321 4567890",
-      role: "Admin",
-      status: "Active",
-      createdAt: "2024-05-16",
-    },
-    {
-      id: 2,
-      logo: "https://ui-avatars.com/api/?name=Bright+Retail",
-      name: "Bright Retail Pvt Ltd",
-      email: "sales@brightretail.com",
-      contact: "+92 300 1234567",
-      role: "Salesman",
-      status: "Inactive",
-      createdAt: "2024-08-10",
-    },
-    {
-      id: 3,
-      logo: "https://ui-avatars.com/api/?name=Alpha+Enterprises",
-      name: "Alpha Enterprises",
-      email: "support@alphaent.com",
-      contact: "+92 345 9087654",
-      role: "Manager",
-      status: "Active",
-      createdAt: "2025-01-04",
-    },
-  ]);
+  const [companies, setCompanies] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editCompanyId, setEditCompanyId] = useState(null);
 
   // Define mapping of countries to VAT numbers
 
@@ -147,7 +121,6 @@ const ManageCompanies = () => {
     vatPrefix: "",
     vatNumber: "",
     country: "",
-    role: "",
     status: "",
   });
 
@@ -157,7 +130,7 @@ const ManageCompanies = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 2;
+  const itemsPerPage = 8;
 
   // ----- Filtered and Paginated Companies -----
   const filteredCompanies = companies.filter((c) => {
@@ -166,60 +139,138 @@ const ManageCompanies = () => {
       c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.contact.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesRole = filterRole === "All" || c.role === filterRole;
+    // const matchesRole = filterRole === "All" || c.role === filterRole;
     const matchesStatus = filterStatus === "All" || c.status === filterStatus;
 
-    return matchesSearch && matchesRole && matchesStatus;
+    return matchesSearch && matchesStatus;
+
   });
 
-  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
   const paginatedCompanies = filteredCompanies.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // ----- Handlers -----
-  const handleAddCompany = () => {
-    if (!newCompany.name) {
-      return toast.error("Company name is required!");
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const fetchCompanies = async () => {
+    try {
+      const res = await api.get("/companies");
+
+      if (res.data.success) {
+        const formatted = res.data.data.map((item, index) => ({
+          id: item._id,
+          logo:
+            item.companyLogo?.url || "https://ui-avatars.com/api/?name=Company",
+          name: item.companyName,
+          email: item.email,
+          contact: item.contact,
+          status: item.status,
+          createdAt: item.createdAt.split("T")[0],
+        }));
+
+        setCompanies(formatted);
+      } else {
+        toast.error("Failed to fetch companies");
+      }
+    } catch (error) {
+      toast.error("Error fetching companies");
     }
+  };
 
-    if (!newCompany.address) {
-      return toast.error("Address is required!");
-    }
-
-    if (!newCompany.country) {
-      return toast.error("Country is required!");
-    }
-
-    const companyToAdd = {
-      id: companies.length + 1,
-      name: newCompany.name,
-      email: newCompany.email,
-      contact: newCompany.contact,
-      role: newCompany.role,
-      status: newCompany.status,
-      logo:
-        newCompany.logo ||
-        `https://ui-avatars.com/api/?name=${newCompany.name.replace(
-          /\s/g,
-          "+"
-        )}`,
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-
-    setCompanies((prev) => [...prev, companyToAdd]);
-    toast.success("Company added successfully!");
-    setIsAddOpen(false);
-
+  const handleAddClick = () => {
     setNewCompany({
       name: "",
+      logo: null,
       email: "",
       contact: "",
-      role: "",
+      address: "",
+      vatPrefix: "",
+      vatNumber: "",
+      country: "",
       status: "",
-      logo: "",
     });
+    setIsEditMode(false); // 👈 Add this
+    setIsAddOpen(true);
+  };
+
+  // ----- Handlers -----
+  const handleAddCompany = async () => {
+    setSaving(true);
+    try {
+      if (!newCompany.name) return toast.error("Company name is required!");
+      if (!newCompany.address) return toast.error("Address is required!");
+      if (!newCompany.country) return toast.error("Country is required!");
+         // ✅ Email Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (newCompany.email && !emailRegex.test(newCompany.email)) {
+      return toast.error("Please enter a valid email address!");
+    }
+      const formData = new FormData();
+      formData.append("companyName", newCompany.name);
+      formData.append("email", newCompany.email);
+      formData.append("contact", newCompany.contact);
+      formData.append("address", newCompany.address);
+      formData.append("country", newCompany.country);
+      formData.append("vatCode", newCompany.vatPrefix || "");
+
+      formData.append(
+        "vatNumber",
+        newCompany.vatPrefix
+          ? `${newCompany.vatPrefix}${newCompany.vatNumber}`
+          : newCompany.vatNumber || ""
+      );
+
+      formData.append("status", newCompany.status || "Active");
+
+      // Only send file when user selects new one
+      if (newCompany.logo && typeof newCompany.logo !== "string") {
+        formData.append("companyLogo", newCompany.logo);
+      }
+
+      let res;
+
+      // ⭐ UPDATE MODE
+      if (isEditMode && editCompanyId) {
+        res = await api.put(`/companies/${editCompanyId}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+      // ⭐ ADD MODE
+      else {
+        res = await api.post("/companies", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
+      if (res.data.success) {
+        toast.success(isEditMode ? "Company updated!" : "Company added!");
+
+        fetchCompanies();
+        setIsAddOpen(false);
+
+        setNewCompany({
+          name: "",
+          logo: null,
+          email: "",
+          contact: "",
+          address: "",
+          vatPrefix: "",
+          vatNumber: "",
+          country: "",
+          status: "",
+        });
+      } else {
+        toast.error(res.data.message || "Operation failed");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Server Error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const EU_VAT_RATES = {
@@ -229,8 +280,76 @@ const ManageCompanies = () => {
   };
 
   const vatRate = EU_VAT_RATES[newCompany.country] || 0;
-  const handleEdit = (id) => toast.info(`Editing company #${id}`);
-  const handleDelete = (id) => toast.error(`Deleting company #${id}`);
+  const handleEdit = async (id) => {
+    try {
+      // Find selected company from table list
+      const company = companies.find((c) => c.id === id);
+      if (!company) {
+        toast.error("Company not found!");
+        return;
+      }
+
+      const res = await api.get(`/companies/${company._id || company.id}`);
+
+      if (!res.data.success) {
+        toast.error("Failed to load company details");
+        return;
+      }
+
+      const data = res.data.data;
+      console.log(data);
+
+      // Split VAT Prefix + Number
+      const vat = data.vatNumber || "";
+      const vatPrefix = vat.substring(0, 2);
+      const vatNumber = vat.substring(2);
+
+      // Prefill form
+      setNewCompany({
+        name: data.companyName || "",
+        logo: data.companyLogo?.url || null,
+        email: data.email || "",
+        contact: data.contact || "",
+        address: data.address || "",
+        country: data.country || "",
+        vatPrefix,
+        vatNumber,
+        status: data.status || "Active",
+      });
+
+      setEditCompanyId(data._id);
+      setIsEditMode(true);
+      setIsAddOpen(true);
+    } catch (err) {
+      console.log(err);
+      toast.error("Error loading company");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      setSaving(true);
+      toast.loading("Deleting company...");
+
+      const res = await api.delete(`/companies/${id}`);
+
+      toast.dismiss();
+
+      if (res.data?.success) {
+        toast.success("Company deleted successfully!");
+        fetchCompanies(); // refresh list
+      } else {
+        toast.error(res.data?.message || "Failed to delete");
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error(error.response?.data?.message || "Server error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  console.log({ paginatedCompanies });
 
   return (
     <DashboardLayout>
@@ -250,7 +369,10 @@ const ManageCompanies = () => {
           {/* Add Company Dialog */}
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
+              <Button
+                onClick={handleAddClick}
+                className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200"
+              >
                 <Plus className="w-4 h-4 mr-2" /> Add Company
               </Button>
             </DialogTrigger>
@@ -258,7 +380,7 @@ const ManageCompanies = () => {
               <DialogHeader className="border-b border-border/50 pb-4">
                 <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
                   <Plus className="w-5 h-5 text-primary" />
-                  Add New Company
+                  {isEditMode ? "Update Company" : " Add New Company"}
                 </DialogTitle>
               </DialogHeader>
 
@@ -286,32 +408,39 @@ const ManageCompanies = () => {
 
                   {/* Company Logo */}
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium">
-                      <Image className="w-4 h-4" /> Company Logo
-                    </Label>
+                    {/* Label + Image Side by Side */}
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2 text-sm font-medium">
+                        <Image className="w-4 h-4" /> Company Logo
+                      </Label>
+
+                      {newCompany.logo && (
+                        <img
+                          src={
+                            typeof newCompany.logo === "string"
+                              ? newCompany.logo
+                              : URL.createObjectURL(newCompany.logo)
+                          }
+                          alt="Company Logo"
+                          className="w-12 h-12 rounded-lg border object-cover shadow-sm"
+                        />
+                      )}
+                    </div>
+
+                    {/* File Input */}
                     <Input
                       type="file"
                       accept=".jpg,.png,.svg"
                       onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {
-                          const reader = new FileReader();
-                          reader.onload = () =>
-                            setNewCompany((prev) => ({
-                              ...prev,
-                              logo: reader.result,
-                            }));
-                          reader.readAsDataURL(e.target.files[0]);
+                          setNewCompany((prev) => ({
+                            ...prev,
+                            logo: e.target.files[0],
+                          }));
                         }
                       }}
                       className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                     />
-                    {newCompany.logo && (
-                      <span className="text-sm text-muted-foreground">
-                        {typeof newCompany.logo === "string"
-                          ? "Logo selected"
-                          : newCompany.logo.name}
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -387,7 +516,7 @@ const ManageCompanies = () => {
                         setNewCompany((prev) => ({
                           ...prev,
                           country: val,
-                          vatNumber: countryVatMap[val] || "", // auto-fill VAT
+                          // vatNumber: countryVatMap[val] || "", // auto-fill VAT
                         }))
                       }
                     >
@@ -481,24 +610,6 @@ const ManageCompanies = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-sm font-medium">
-                      <Shield className="w-4 h-4" /> Role
-                    </Label>
-                    <Select
-                      value={newCompany.role}
-                      onValueChange={(val) =>
-                        setNewCompany((prev) => ({ ...prev, role: val }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Accounting">Accounting</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium">
                       <CheckCircle2 className="w-4 h-4" /> Status
                     </Label>
                     <Select
@@ -522,8 +633,18 @@ const ManageCompanies = () => {
                 <Button
                   className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium"
                   onClick={handleAddCompany}
+                  disabled={saving}
                 >
-                  Save Company
+                  {saving ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                      {isEditMode ? "Updating..." : "Saving..."}
+                    </>
+                  ) : isEditMode ? (
+                    "Update Company"
+                  ) : (
+                    "Save Company"
+                  )}
                 </Button>
               </div>
             </DialogContent>
@@ -539,21 +660,12 @@ const ManageCompanies = () => {
                 placeholder="Search by name, email, or contact..."
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50 bg-background/80 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // ⭐ RESET PAGE FOR BETTER UX
+                }}
               />
             </div>
-
-            <Select value={filterRole} onValueChange={setFilterRole}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Filter by Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Roles</SelectItem>
-                <SelectItem value="Admin">Admin</SelectItem>
-                <SelectItem value="Manager">Manager</SelectItem>
-                <SelectItem value="Salesman">Salesman</SelectItem>
-              </SelectContent>
-            </Select>
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-40">
@@ -590,24 +702,23 @@ const ManageCompanies = () => {
                     Company Name
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase">
-                    Email / Contact
+                    Contact
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase">
-                    Role
+                    Email
                   </th>
+
                   <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase">
                     Status
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase">
-                    Created Date
-                  </th>
+
                   <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
-                {paginatedCompanies.map((company, index) => (
+                {paginatedCompanies?.map((company, index) => (
                   <tr
                     key={company.id}
                     className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
@@ -620,27 +731,14 @@ const ManageCompanies = () => {
                         className="w-10 h-10 rounded-full border"
                       />
                     </td>
-                    <td className="px-6 py-4 font-medium">{company.name}</td>
+                    <td className="px-6 py-4 font-medium">{company?.name || "-"}</td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">
-                      <div className="flex flex-col">
-                        <span>{company.email}</span>
-                        <span>{company.contact}</span>
-                      </div>
+                      <span>{company?.contact || "-"}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <Badge
-                        variant="secondary"
-                        className={`${
-                          company.role === "Admin"
-                            ? "bg-blue-100 text-blue-700 border-blue-200"
-                            : company.role === "Manager"
-                            ? "bg-amber-100 text-amber-700 border-amber-200"
-                            : "bg-green-100 text-green-700 border-green-200"
-                        }`}
-                      >
-                        {company.role}
-                      </Badge>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      <span>{company?.email || "-"}</span>
                     </td>
+
                     <td className="px-6 py-4">
                       <Badge
                         variant="secondary"
@@ -650,13 +748,10 @@ const ManageCompanies = () => {
                             : "bg-red-100 text-red-700 border-red-200"
                         }`}
                       >
-                        {company.status}
+                        {company?.status || "-"}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-primary/60" />
-                      {company.createdAt}
-                    </td>
+
                     <td className="px-6 py-4">
                       <div className="flex gap-1">
                         <Button
@@ -695,28 +790,12 @@ const ManageCompanies = () => {
               </tbody>
             </table>
 
-            {/* Pagination Controls */}
-            {filteredCompanies.length > itemsPerPage && (
-              <div className="flex justify-end items-center gap-2 p-4">
-                <Button
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((prev) => prev - 1)}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  size="sm"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((prev) => prev + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredCompanies.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
           </CardContent>
         </Card>
       </div>
