@@ -279,13 +279,18 @@ const StockPurchaseDetails = () => {
       const res = await api.get(`/categories/sizes/${category}`);
 
       if (res.data.success) {
-        setSizesList((res.data.data.sizes || []).map((s) => s.size));
+        const sizes = res.data.data.sizes || [];
+        setSizesList(sizes.map((s) => s.size));
+
+        setAvailableSizes(sizes); // 🔥 FIX: size dropdown now shows
       } else {
         setSizesList([]);
+        setAvailableSizes([]); // 🔥 Also reset when empty
       }
     } catch (error) {
       console.error("Error fetching sizes:", error);
       setSizesList([]);
+      setAvailableSizes([]);
     } finally {
       setSizesLoading(false);
     }
@@ -420,10 +425,9 @@ const StockPurchaseDetails = () => {
         // user removed existing PDF → send empty string to remove it
         formData.append("supplierInvoice", "");
       }
-for (let pair of formData.entries()) {
-  console.log(pair[0] + " : " + pair[1]);
-}
-
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + " : " + pair[1]);
+      }
 
       let res;
 
@@ -545,29 +549,27 @@ for (let pair of formData.entries()) {
     setPurchaseItems(purchaseItems.filter((_, i) => i !== index));
   };
 
- 
- const handleEditItem = (index) => {
-  const item = purchaseItems[index];
-console.log({item});
+  const handleEditItem = (index) => {
+    const item = purchaseItems[index];
+    console.log({ item });
 
-  setItemId(item.itemId);
-  setDescription(item.description);
-  setQuantity(item.quantity);
-  setUnitCost(item.unitCost);
-  setSize(item.size);
+    setItemId(item.itemId);
+    setDescription(item.description);
+    setQuantity(item.quantity);
+    setUnitCost(item.unitCost);
+    setSize(item.size);
 
-  // ✅ Load VAT fields during edit
-  setVatRegime(item.vatRegime);
-  setVatRate(item.vatRate);
-  setTotalExclVAT(item.totalExclVAT);
-  setVatAmount(item.vatAmount);
-  setTotalInclVAT(item.totalInclVAT);
+    // ✅ Load VAT fields during edit
+    setVatRegime(item.vatRegime);
+    setVatRate(item.vatRate);
+    setTotalExclVAT(item.totalExclVAT);
+    setVatAmount(item.vatAmount);
+    setTotalInclVAT(item.totalInclVAT);
 
-  setEditItemIndex(index);
-  setIsItemEditMode(true);
-   setAvailableSizes([]);
-};
-
+    setEditItemIndex(index);
+    setIsItemEditMode(true);
+    setAvailableSizes([]);
+  };
 
   useEffect(() => {
     const totalPages = Math.ceil(filteredStock.length / itemsPerPage);
@@ -814,8 +816,7 @@ console.log({item});
                               setUnitCost(item.purchasePrice || 0);
 
                               // Fetch Sizes With Stock
-                             fetchSizesByCategory(item.category);
-
+                              fetchSizesByCategory(item.category);
                             } else {
                               setAvailableSizes([]);
                             }
@@ -855,7 +856,7 @@ console.log({item});
                             <SelectContent>
                               {availableSizes.map((szObj) => (
                                 <SelectItem key={szObj.size} value={szObj.size}>
-                                  {szObj.size} (Stock: {szObj.stock})
+                                  {szObj.size}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -877,34 +878,10 @@ console.log({item});
                           onChange={(e) => {
                             const value = Number(e.target.value);
 
-                            const selectedSizeObj = availableSizes.find(
-                              (x) => x.size === size
-                            );
-
-                            if (availableSizes.length > 0 && !selectedSizeObj) {
-                              setQuantity(value);
-                              return;
-                            }
-
-                            if (
-                              availableSizes.length > 0 &&
-                              value > selectedSizeObj.stock
-                            ) {
-                              toast.error(
-                                `Only ${selectedSizeObj.stock} units available in stock`
-                              );
-                              return;
-                            }
-
                             setQuantity(value);
-                            setQtyError("");
                           }}
                           className="border-2"
                         />
-
-                        {qtyError && (
-                          <p className="text-red-500 text-sm">{qtyError}</p>
-                        )}
                       </div>
 
                       {/* Unit Cost */}
@@ -937,7 +914,7 @@ console.log({item});
                           }}
                         >
                           <SelectTrigger className="border-2">
-                            <SelectValue placeholder="Select VAT Type" />
+                            <SelectValue placeholder="Select VAT Regime" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Exemption">
