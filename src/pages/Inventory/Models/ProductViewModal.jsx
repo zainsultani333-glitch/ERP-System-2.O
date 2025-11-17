@@ -41,9 +41,6 @@ const ProductViewModal = ({ isOpen, onClose, product }) => {
                 <p className="font-medium text-muted-foreground">Category:</p>
                 <p className="font-semibold">{product.category}</p>
 
-                <p className="font-medium text-muted-foreground">Size:</p>
-                <p className="font-semibold">{product.size || "-"}</p>
-
                 <p className="font-medium text-muted-foreground">SKU:</p>
                 <p className="font-semibold break-all">{product.sku || "-"}</p>
 
