@@ -56,7 +56,7 @@ const StockPurchaseDetails = () => {
   const [vatAmount, setVatAmount] = useState(0);
   const [totalInclVAT, setTotalInclVAT] = useState(0);
   const [availableSizes, setAvailableSizes] = useState([]);
-  const [qtyError, setQtyError] = useState("");
+
 
   const [purchaseDate, setPurchaseDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -106,6 +106,10 @@ const StockPurchaseDetails = () => {
   const handleAddPurchaseItem = () => {
     if (!itemId || !quantity) {
       toast.error("Please fill all Items required fields");
+      return;
+    }
+     if (!vatRegime) {
+      toast.error("Select a VAT regime");
       return;
     }
 
@@ -452,6 +456,7 @@ const StockPurchaseDetails = () => {
         fetchStock();
         resetForm();
         setIsAddOpen(false);
+       
       } else {
         toast.error(res.data.message || "Failed to save purchase");
       }
@@ -877,7 +882,8 @@ const StockPurchaseDetails = () => {
                           value={quantity}
                           onChange={(e) => {
                             const value = Number(e.target.value);
-
+                              
+                           
                             setQuantity(value);
                           }}
                           className="border-2"

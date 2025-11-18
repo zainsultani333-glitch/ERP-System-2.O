@@ -197,7 +197,7 @@ const DashboardLayout = ({ children }) => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/notifications', {
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/notifications`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -220,7 +220,7 @@ const DashboardLayout = ({ children }) => {
 
   const markAsRead = async (notificationId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/notifications/${notificationId}/read`, {
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -244,7 +244,7 @@ const DashboardLayout = ({ children }) => {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/notifications/mark-all-read', {
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/mark-all-read`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

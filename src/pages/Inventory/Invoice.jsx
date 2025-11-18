@@ -95,7 +95,7 @@ const Invoice = () => {
   // ---------------- FORM STATES ----------------
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [customerVAT, setCustomerVAT] = useState("");
-  const [vatRegime, setVatRegime] = useState("Exemption");
+  const [vatRegime, setVatRegime] = useState("");
 
   const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -267,6 +267,7 @@ const Invoice = () => {
       setVatRate("");
       setTotalExclVAT(0);
       setVatAmount(0);
+      setAvailableSizes([]);
       setTotalInclVAT(0);
       setIsEditMode(false);
       setEditingInvoiceId(null);
@@ -299,7 +300,7 @@ const Invoice = () => {
       setStatus(fullInvoice.status || "Draft");
       setInvoiceDate(
         fullInvoice.invoiceDate?.split("T")[0] ||
-        new Date().toISOString().split("T")[0]
+          new Date().toISOString().split("T")[0]
       );
 
       // Set invoice items
@@ -339,14 +340,17 @@ const Invoice = () => {
     setQuantity(item.quantity.toString());
     setUnitPrice(item.unitPrice.toString());
     setVatRegime(item.vatRegime);
-    setVatRate((item.vatRate * 100).toString());
+    setVatRate(item.vatRate.toString());
 
     // 🚀 Load category sizes for edit mode
     const selectedItem = itemsList.find((it) => it._id === item.itemId);
     if (selectedItem) {
       try {
         const res = await api.get(
-          `/categories/sizes-available/${selectedItem.category}`
+          `/categories/sizes-available/${selectedItem.category.replace(
+            /\s+/g,
+            ""
+          )}`
         );
         setAvailableSizes(res.data.data?.sizes || []);
       } catch (err) {
@@ -364,6 +368,10 @@ const Invoice = () => {
       toast.error("Please fill all item fields");
       return;
     }
+    if (!vatRegime) {
+      toast.error("Select a VAT regime");
+      return;
+    }
 
     const selectedItem = itemsList.find((item) => item._id === itemId);
 
@@ -373,7 +381,7 @@ const Invoice = () => {
       quantity: Number(quantity),
       unitPrice: Number(unitPrice),
       vatRegime: vatRegime,
-      vatRate: Number(vatRate) / 100,
+      vatRate: Number(vatRate),
       totalExclVAT,
       vatAmount,
       totalInclVAT,
@@ -420,6 +428,7 @@ const Invoice = () => {
       setCustomerVAT("");
       setVatRegime("");
       setStatus("Draft");
+      setAvailableSizes([]);
       resetItemForm(); // Use the new reset function
       setIsEditMode(false);
       setEditingInvoiceId(null);
@@ -516,14 +525,6 @@ const Invoice = () => {
 
   // Handle Delete Invoice
   const handleDeleteInvoice = async (invoiceId) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this invoice? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-
     try {
       toast.loading("Deleting invoice...");
 
@@ -548,7 +549,6 @@ const Invoice = () => {
   };
 
   const handleSaveInvoice = async () => {
-    setSaving(true);
     if (!selectedCustomer) {
       toast.error("Please select a customer");
       return;
@@ -558,7 +558,7 @@ const Invoice = () => {
       toast.error("Please add at least one item");
       return;
     }
-
+    setSaving(true);
     try {
       const payload = {
         status,
@@ -635,7 +635,8 @@ const Invoice = () => {
 
       if (response.data.success) {
         toast.success(
-          `Invoice ${status === "Final" ? "finalized" : isEditMode ? "updated" : "saved"
+          `Invoice ${
+            status === "Final" ? "finalized" : isEditMode ? "updated" : "saved"
           } successfully!`
         );
         setIsAddOpen(false);
@@ -661,7 +662,7 @@ const Invoice = () => {
       size: inv.items?.[0]?.size || "-",
       quantity: inv.items?.[0]?.quantity || 0,
       unit: inv?.items[0].unitPrice,
-      vatRate: (inv.items?.[0]?.vatRate || 0) * 100,
+      vatRate: inv.items?.[0]?.vatRate || 0,
       totalExclVAT: inv.netTotal,
       vatAmount: inv.vatTotal,
       totalInclVAT: inv.grandTotal,
@@ -685,7 +686,7 @@ const Invoice = () => {
       size: inv.items?.[0]?.size || "-",
       quantity: inv.items?.[0]?.quantity || 0,
       unit: inv?.items[0].unitPrice,
-      vatRate: (inv.items?.[0]?.vatRate || 0) * 100,
+      vatRate: inv.items?.[0]?.vatRate || 0,
       totalExclVAT: inv.netTotal,
       vatAmount: inv.vatTotal,
       totalInclVAT: inv.grandTotal,
@@ -709,7 +710,7 @@ const Invoice = () => {
       size: inv.items?.[0]?.size || "-",
       quantity: inv.items?.[0]?.quantity || 0,
       unit: inv?.items[0].unitPrice,
-      vatRate: (inv.items?.[0]?.vatRate || 0) * 100,
+      vatRate: inv.items?.[0]?.vatRate || 0,
       totalExclVAT: inv.netTotal,
       vatAmount: inv.vatTotal,
       totalInclVAT: inv.grandTotal,
@@ -854,8 +855,9 @@ const Invoice = () => {
         const payload = {
           to: invoice.customer?.email || "emanali262770@gmail.com",
           subject: `Your Invoice ${invoice.invoiceNo} from VESTIAIRE ST. HONORÉ`,
-          message: `Hello ${invoice.customer?.customerName || invoice.customerName || "Customer"
-            }, please find your invoice attached.`,
+          message: `Hello ${
+            invoice.customer?.customerName || invoice.customerName || "Customer"
+          }, please find your invoice attached.`,
         };
 
         const response = await api.post(
@@ -880,7 +882,8 @@ const Invoice = () => {
       const phone = invoice.phoneNumber || "03184486979";
 
       const msg = encodeURIComponent(
-        `Hello ${invoice.customerName || "Customer"}, your invoice ${invoice.invoiceNo
+        `Hello ${invoice.customerName || "Customer"}, your invoice ${
+          invoice.invoiceNo
         } is ready.`
       );
 
@@ -985,7 +988,8 @@ const Invoice = () => {
                     {/* Customer */}
                     <div className="space-y-3">
                       <Label className="flex items-center gap-2">
-                        <User className="w-4 h-4" /> Customer
+                        <User className="w-4 h-4" /> Customer{" "}
+                        <span className="text-red-500">*</span>{" "}
                       </Label>
 
                       {customerLoading ? (
@@ -1093,7 +1097,8 @@ const Invoice = () => {
                         )}
                       </div>
 
-                      {/* Size Selection — show only if sizes exist */}
+                      {/* Size Selection */}
+                      {/* Size Selection (ONLY show when sizes exist) */}
                       {availableSizes.length > 0 && (
                         <div className="space-y-2">
                           <Label>Size</Label>
@@ -1184,7 +1189,7 @@ const Invoice = () => {
                           }}
                         >
                           <SelectTrigger className="border-2">
-                            <SelectValue placeholder="Select VAT Regime" />
+                            <SelectValue placeholder="Select VAT Type" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Exemption">
@@ -1261,7 +1266,10 @@ const Invoice = () => {
                           <thead className="bg-gray-100">
                             <tr>
                               <th className="p-2 text-left">Item</th>
-                              <th className="p-2 text-left">Size</th>
+                              {/* 🔥 Auto-hide Size column */}
+                              {invoiceItems.some((it) => it.size) && (
+                                <th className="p-2 text-left">Size</th>
+                              )}
                               <th className="p-2 text-left">Qty</th>
                               <th className="p-2 text-left">Price</th>
                               <th className="p-2 text-left">VAT Rate</th>
@@ -1278,10 +1286,13 @@ const Invoice = () => {
                               return (
                                 <tr key={i} className="border-t">
                                   <td className="p-2">{itemName}</td>
-                                  <td className="p-2">{it.size}</td>
+                                  {/* 🔥 Auto-hide Size column */}
+                                  {invoiceItems.some((x) => x.size) && (
+                                    <td className="p-2">{it.size || "-"}</td>
+                                  )}
                                   <td className="p-2">{it.quantity}</td>
                                   <td className="p-2">€{it.unitPrice}</td>
-                                  <td className="p-2">{it.vatRate * 100}%</td>
+                                  <td className="p-2">{it.vatRate}%</td>
                                   <td className="p-2 font-semibold">
                                     €{it.totalInclVAT?.toFixed(2)}
                                   </td>
@@ -1439,7 +1450,7 @@ const Invoice = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <Input
-                placeholder="Search by item "
+                placeholder="Search by item or description..."
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50 bg-background/80"
                 value={searchTerm}
                 onChange={(e) => {
@@ -1513,7 +1524,7 @@ const Invoice = () => {
                       Item / Product
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                      Size
+                      Description
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                       Quantity
@@ -1583,10 +1594,11 @@ const Invoice = () => {
                         </td>
                         <td className="px-6 py-4 font-normal text-sm text-center">
                           <div
-                            className={`px-2 py-1 rounded-full ${item.status === "Final"
+                            className={`px-2 py-1 rounded-full ${
+                              item.status === "Final"
                                 ? "bg-green-200 text-green-700"
                                 : "bg-orange-300 text-white"
-                              }`}
+                            }`}
                           >
                             {item?.status}
                           </div>
@@ -1754,15 +1766,17 @@ const Invoice = () => {
                             )}
 
                             {/* 🗑 Delete - Show for BOTH drafts and finals */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                              title="Delete"
-                              onClick={() => handleDeleteInvoice(item._id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {item.status !== "Final" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                                title="Delete"
+                                onClick={() => handleDeleteInvoice(item._id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

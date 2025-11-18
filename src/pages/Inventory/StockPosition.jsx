@@ -21,7 +21,6 @@ const StockPosition = () => {
     return s;
   };
 
-  // Fetch data
   const fetchStockPosition = async () => {
     try {
       setLoading(true);
@@ -38,7 +37,8 @@ const StockPosition = () => {
     fetchStockPosition();
   }, []);
 
-  // SIZE SORTING
+  console.log(stockPositionData);
+
   const sizePriority = ["S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL", "6XL"];
 
   const parseXL = (size) => {
@@ -58,7 +58,6 @@ const StockPosition = () => {
       return sizePriority.indexOf(a) - sizePriority.indexOf(b);
     });
 
-  // 1️⃣ Get ALL unique sizes
   const allSizes = sortedSizes(
     Array.from(
       new Set(
@@ -69,11 +68,12 @@ const StockPosition = () => {
     ).filter((sz) => sz !== "XS")
   );
 
-  // 2️⃣ Build consolidated rows (FIXED: totalSold added)
+  // ✅ UPDATED: totalPurchased added
   const tableRows = stockPositionData.map((cat) => {
     const sizeMap = {};
     let totalQty = 0;
-    let totalSold = 0; // ✅ Added
+    let totalSold = 0;
+    let totalPurchased = 0; // ⭐ NEW FIELD
     let lastPurchase = null;
     let lastSale = null;
 
@@ -83,7 +83,8 @@ const StockPosition = () => {
 
       const x = {
         stock: s.stock || 0,
-        totalSold: s.totalSold || 0, // useful for future
+        totalSold: s.totalSold || 0,
+        totalPurchased: s.totalPurchased || 0, // ⭐ NEW
         lastPurchaseDate: s.lastPurchaseDate,
         lastSaleDate: s.lastSaleDate,
       };
@@ -91,7 +92,8 @@ const StockPosition = () => {
       sizeMap[name] = x;
 
       totalQty += x.stock;
-      totalSold += s.totalSold || 0; // ✅ FIX: total sold calculated
+      totalSold += s.totalSold || 0;
+      totalPurchased += s.totalPurchased || 0; // ⭐ NEW
 
       if (
         x.lastPurchaseDate &&
@@ -111,13 +113,13 @@ const StockPosition = () => {
       category: cat.categoryName,
       sizeMap,
       totalQty,
-      totalSold, // ✅ added here
+      totalSold,
+      totalPurchased, // ⭐ NEW
       lastPurchase,
       lastSale,
     };
   });
 
-  // 3️⃣ Filters
   const filteredRows = tableRows
     .filter((row) =>
       searchTerm
@@ -138,7 +140,6 @@ const StockPosition = () => {
           </span>
         </h1>
 
-        {/* Filters Section */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div className="flex gap-4">
             <div className="w-[250px]">
@@ -176,7 +177,6 @@ const StockPosition = () => {
           </div>
         </div>
 
-        {/* Table */}
         <Card className="border rounded-2xl shadow-xl">
           <CardContent className="p-4 overflow-x-auto">
             <table className="min-w-full table-auto border-collapse">
@@ -193,6 +193,7 @@ const StockPosition = () => {
 
                   <th className="p-3 text-center">Total Qty</th>
                   <th className="p-3 text-center">Total Sold</th>
+                  <th className="p-3 text-center">Total Purchased</th> {/* ⭐ NEW */}
                   <th className="p-3 text-center">Last Purchase</th>
                   <th className="p-3 text-center">Last Sale</th>
                 </tr>
@@ -216,6 +217,9 @@ const StockPosition = () => {
                     <td className="p-3 text-center font-bold">
                       {row.totalSold ?? "-"}
                     </td>
+                    <td className="p-3 text-center font-bold">
+                      {row.totalPurchased ?? "-"} {/* ⭐ NEW */}
+                    </td>
 
                     <td className="p-3 text-center">
                       {row.lastPurchase
@@ -231,11 +235,10 @@ const StockPosition = () => {
                   </tr>
                 ))}
 
-                {/* 👉 NO DATA HANDLING ADDED HERE */}
                 {filteredRows.length === 0 && (
                   <tr>
                     <td
-                      colSpan={2 + allSizes.length + 3}
+                      colSpan={2 + allSizes.length + 4}
                       className="text-center py-10 text-gray-500 font-medium"
                     >
                       <Package className="w-10 h-10 mx-auto mb-3 opacity-50" />

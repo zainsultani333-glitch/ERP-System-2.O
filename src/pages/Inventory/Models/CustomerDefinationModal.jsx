@@ -40,6 +40,15 @@ const CustomerViewModal = ({ isOpen, onClose, customer }) => {
                   Phone Number:
                 </p>
                 <p className="font-semibold">{customer.phoneNumber}</p>
+                 <p className="font-medium text-muted-foreground">
+                  City:
+                </p>
+                <p className="font-semibold">{customer.city}</p>
+
+                <p className="font-medium text-muted-foreground">
+                  Postal code:
+                </p>
+                <p className="font-semibold">{customer.postalCode}</p>
 
                 <p className="font-medium text-muted-foreground">Email:</p>
                 <p className="font-semibold break-all">{customer.email}</p>

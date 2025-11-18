@@ -66,6 +66,7 @@ const DraftTrack = () => {
       if (res.data.success) {
         toast.success("Purchase marked as RECEIVED successfully!");
         fetchStock(); // Refresh pending list
+         window.location.reload();
       } else {
         toast.error("Failed to update purchase status!");
       }

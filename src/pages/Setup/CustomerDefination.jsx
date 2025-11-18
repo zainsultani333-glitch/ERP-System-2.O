@@ -280,7 +280,7 @@ const CustomerDefinition = () => {
     try {
       setSaving(true);
       const payload = {
-        customerCode: newCustomer.customerCode,
+     
         customerName: newCustomer.customerName,
         phoneNumber: newCustomer.phoneNumber,
         email: newCustomer.email,
@@ -288,15 +288,12 @@ const CustomerDefinition = () => {
         city: newCustomer.city,
         postalCode: newCustomer.postalCode,
         country: newCustomer.country,
-        vatNumber:
-          newCustomer.customerType === "Company"
-            ? `${newCustomer.vatPrefix || ""}${newCustomer.vatNumber || ""}`
-            : "",
+        vatNumber: `${newCustomer.vatPrefix || ""}${
+          newCustomer.vatNumber || ""
+        }`,
         customerType: newCustomer.customerType,
-        vatRegime: newCustomer.vatRegime,
         defaultVatRate: newCustomer.defaultVatRate,
-        paymentTerms: newCustomer.paymentTerms,
-        categoryId: newCustomer.categoryId || "",
+      
       };
 
       if (editingCustomer) {
@@ -314,7 +311,6 @@ const CustomerDefinition = () => {
     } catch (error) {
       console.error("Failed to save customer:", error);
       toast.error(error?.response?.data?.message || "Something went wrong!");
-
     } finally {
       setSaving(false);
     }
@@ -732,8 +728,8 @@ const CustomerDefinition = () => {
                         ? "Updating..."
                         : "Saving..."
                       : editingCustomer
-                        ? "Update Customer"
-                        : "Save Customer"}
+                      ? "Update Customer"
+                      : "Save Customer"}
                   </Button>
                 </div>
               </DialogContent>
