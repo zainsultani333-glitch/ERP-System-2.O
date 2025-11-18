@@ -140,7 +140,7 @@ const InvoiceViewModal = ({ isOpen, onClose, invoice }) => {
 
                         {/* VAT */}
                         <td className="px-4 py-2">
-                          {(it.vatRate * 100).toFixed(0)}%
+                          {it.vatRate}%
                         </td>
 
                         {/* Total */}
