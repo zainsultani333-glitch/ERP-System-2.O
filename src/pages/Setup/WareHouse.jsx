@@ -163,7 +163,6 @@ const WareHouse = () => {
     try {
       setButtonLoading(true);
 
-      // Construct payload from form fields (you’ll add state for these below)
       const payload = {
         warehouseName: newWarehouse.name,
         warehouseAddress: newWarehouse.address,
@@ -177,17 +176,25 @@ const WareHouse = () => {
       const response = await api.post(`/warehouses`, payload);
 
       if (response.data.success) {
-        toast.success("✅ Warehouse added successfully!");
-        fetchWareHouse(); // Refresh list
+        toast.success("Warehouse added successfully!");
+
+        const newRow = {
+          id: response.data.data._id,
+          name: response.data.data.warehouseName,
+          address: response.data.data.warehouseAddress,
+          incharge: response.data.data.inCharge,
+          itemsInStock: response.data.data.itemsInStock || 0,
+          PurchaseValue: response.data.data.totalPurchaseValue || 0,
+        };
+
+        // ⭐ INSTANT UPDATE
+        setWarehouses((prev) => [newRow, ...prev]);
+
         setIsAddOpen(false);
-        clearForm(); // <-- clear form
-        setNewWarehouse({
-          name: "",
-          address: "",
-          inchargeName: "",
-          inchargeContact: "",
-          inchargeEmail: "",
-        });
+        clearForm();
+
+        // Optional — soft refresh from DB
+        fetchWareHouse();
       } else {
         toast.error("Failed to add warehouse!");
       }
@@ -209,8 +216,6 @@ const WareHouse = () => {
 
   // ------------------------ DELETE WAREHOUSE ------------------------
   const handleDelete = async (id) => {
-   
-
     try {
       setLoading(true);
       const response = await api.delete(`/warehouses/${id}`);
@@ -270,19 +275,33 @@ const WareHouse = () => {
       const response = await api.put(`/warehouses/${newWarehouse.id}`, payload);
 
       if (response.data.success) {
-        toast.success("✅ Warehouse updated successfully!");
+        toast.success("Warehouse updated successfully!");
+
+        // ⭐ INSTANT UPDATE
+        setWarehouses((prev) =>
+          prev.map((w) =>
+            w.id === newWarehouse.id
+              ? {
+                  ...w,
+                  name: newWarehouse.name,
+                  address: newWarehouse.address,
+                  incharge: {
+                    name: newWarehouse.inchargeName,
+                    contact: newWarehouse.inchargeContact,
+                    email: newWarehouse.inchargeEmail,
+                  },
+                }
+              : w
+          )
+        );
+
+        setIsAddOpen(false);
+        clearForm();
+
+        // optional soft reload
         fetchWareHouse();
-        setIsAddOpen(false); // close dialog
-        clearForm(); // <-- clear form
-        setNewWarehouse({
-          name: "",
-          address: "",
-          inchargeName: "",
-          inchargeContact: "",
-          inchargeEmail: "",
-        });
       } else {
-        toast.error("❌ Failed to update warehouse!");
+        toast.error("Failed to update warehouse!");
       }
     } catch (error) {
       console.error("❌ Error updating warehouse:", error);
@@ -713,7 +732,7 @@ const WareHouse = () => {
                           {visibleFields.includes("PurchaseValue") && (
                             <td className="px-6 py-4">
                               <div className="font-medium text-foreground">
-                                PKR {warehouse.PurchaseValue.toLocaleString()}
+                                € {warehouse.PurchaseValue.toLocaleString()}
                               </div>
                             </td>
                           )}

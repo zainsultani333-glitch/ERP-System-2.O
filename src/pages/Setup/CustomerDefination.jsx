@@ -280,7 +280,6 @@ const CustomerDefinition = () => {
     try {
       setSaving(true);
       const payload = {
-     
         customerName: newCustomer.customerName,
         phoneNumber: newCustomer.phoneNumber,
         email: newCustomer.email,
@@ -293,7 +292,6 @@ const CustomerDefinition = () => {
         }`,
         customerType: newCustomer.customerType,
         defaultVatRate: newCustomer.defaultVatRate,
-      
       };
 
       if (editingCustomer) {
@@ -917,8 +915,9 @@ const CustomerDefinition = () => {
                 </tr>
               </thead>
 
-              {loading ? (
-                <tbody>
+              <tbody className="divide-y divide-border/30">
+                {loading ? (
+                  /* LOADING */
                   <tr>
                     <td
                       colSpan={visibleFields.length + 1}
@@ -932,10 +931,9 @@ const CustomerDefinition = () => {
                       </div>
                     </td>
                   </tr>
-                </tbody>
-              ) : (
-                <tbody className="divide-y divide-border/30">
-                  {currentCustomers.map((c, index) => (
+                ) : currentCustomers.length > 0 ? (
+                  /* DATA ROWS */
+                  currentCustomers.map((c, index) => (
                     <tr
                       key={c.id}
                       className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
@@ -948,56 +946,55 @@ const CustomerDefinition = () => {
 
                       {visibleFields.includes("customerName") && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {c.customerName}
+                          {c.customerName || "-"}
                         </td>
                       )}
 
-                      {/* FIXED — replaced contactPerson with phoneNumber */}
                       {visibleFields.includes("phoneNumber") && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {c.phoneNumber}
+                          {c.phoneNumber || "-"}
                         </td>
                       )}
 
                       {visibleFields.includes("email") && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {c.email}
+                          {c.email || "-"}
                         </td>
                       )}
 
                       {visibleFields.includes("country") && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {c.country}
+                          {c.country || "-"}
                         </td>
                       )}
 
                       {visibleFields.includes("customerType") && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {c.customerType}
+                          {c.customerType || "-"}
                         </td>
                       )}
 
                       {visibleFields.includes("vatNumber") && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {c.vatNumber}
+                          {c.vatNumber || "-"}
                         </td>
                       )}
 
                       {visibleFields.includes("vatRegime") && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {c.vatRegime}
+                          {c.vatRegime || "-"}
                         </td>
                       )}
 
                       {visibleFields.includes("vatRate") && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {c.defaultVatRate}%
+                          {c.defaultVatRate || "-"}%
                         </td>
                       )}
 
                       {visibleFields.includes("paymentTerms") && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {c.paymentTerms}
+                          {c.paymentTerms || "-"}
                         </td>
                       )}
 
@@ -1008,7 +1005,6 @@ const CustomerDefinition = () => {
                             size="icon"
                             onClick={() => handleView(c.id)}
                             className="h-8 w-8 p-0 hover:bg-blue-50 text-gray-600 hover:text-blue-700 transition-all duration-200 rounded-lg"
-                            title="View Customer"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -1018,7 +1014,6 @@ const CustomerDefinition = () => {
                             size="icon"
                             onClick={() => handleEdit(c.id)}
                             className="h-8 w-8 p-0 hover:bg-green-50 text-gray-600 hover:text-green-700 transition-all duration-200 rounded-lg"
-                            title="Edit Customer"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -1028,16 +1023,30 @@ const CustomerDefinition = () => {
                             size="icon"
                             onClick={() => handleDelete(c.id)}
                             className="h-8 w-8 p-0 hover:bg-red-50 text-gray-600 hover:text-red-700 transition-all duration-200 rounded-lg"
-                            title="Delete Customer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              )}
+                  ))
+                ) : (
+                  /* EMPTY STATE */
+                  <tr>
+                    <td colSpan={visibleFields.length + 1}>
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                        <p className="font-medium text-lg">
+                          No customers found
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Try adjusting your search terms or add a new customer
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
             </table>
 
             {filteredCustomers.length > itemsPerPage && (
