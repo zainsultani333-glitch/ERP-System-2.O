@@ -891,7 +891,7 @@ const Invoice = () => {
       toast.success("Redirecting to WhatsApp...");
     }
   };
-  console.log({  draftInvoices });
+  console.log({ draftInvoices });
 
   return (
     <DashboardLayout>
@@ -1595,7 +1595,7 @@ const Invoice = () => {
                         <td className="px-6 py-4 font-normal text-sm text-center">
                           <div
                             className={`px-2 py-1 rounded-full ${
-                              item.status === "Final"
+                              item.status === "Final" || item.status === "final"
                                 ? "bg-green-200 text-green-700"
                                 : "bg-orange-300 text-white"
                             }`}
