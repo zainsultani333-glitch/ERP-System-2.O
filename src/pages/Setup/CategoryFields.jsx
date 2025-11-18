@@ -721,7 +721,7 @@ const CategoryPage = () => {
                     ) : (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={8}
                           className="py-12 text-center text-muted-foreground"
                         >
                           <List className="w-16 h-16 mx-auto mb-4 opacity-50" />
