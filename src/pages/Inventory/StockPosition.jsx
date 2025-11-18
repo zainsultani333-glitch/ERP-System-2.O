@@ -83,12 +83,18 @@ const StockPosition = () => {
       sizeMap[size] = { stock: s.stock };
     });
 
+    // ⭐ Calculate totalQty from sizeMap
+    const totalQtyCalculated = Object.values(sizeMap).reduce(
+      (acc, s) => acc + (s.stock || 0),
+      0
+    );
+
     return {
       id: item._id,
-      itemName: item.itemName, // ⭐ NEW
+      itemName: item.itemName,
       category: item.category,
       sizeMap,
-      totalQty: item.totalQty,
+      totalQty: totalQtyCalculated, // ⭐ Fixed here
       totalSold: item.totalSold,
       totalPurchased: item.totalPurchased,
       lastPurchase: item.lastPurchase,
@@ -113,6 +119,7 @@ const StockPosition = () => {
   const endIndex = startIndex + itemsPerPage;
 
   const currentRows = filteredRows.slice(startIndex, endIndex);
+  console.log({ currentRows });
 
   return (
     <DashboardLayout>
@@ -166,7 +173,7 @@ const StockPosition = () => {
 
           <div className="w-[300px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search  
+              Search
             </label>
             <input
               className="w-full p-2 border rounded-lg"
@@ -180,11 +187,11 @@ const StockPosition = () => {
         {/* TABLE */}
         <Card className="border rounded-2xl shadow-xl">
           <CardContent className="p-4 overflow-x-auto">
-            <table className="min-w-full table-auto border-collapse">
+            <table className="min-w-full  table-auto border-collapse">
               <thead className="bg-gray-50 text-gray-700 uppercase text-sm">
-                <tr>
+                <tr className=" ">
                   <th className="p-3 text-left">Sr</th>
-                  <th className="p-3 text-left">Item Name</th>
+                  <th className="p-3 text-left ">Item Name</th>
                   <th className="p-3 text-left">Category</th>
 
                   {allSizes.map((s) => (
@@ -193,12 +200,13 @@ const StockPosition = () => {
                     </th>
                   ))}
 
-                  <th className="p-3 text-center">Total Qty</th>
-                  <th className="p-3 text-center">Total Sold</th>
-                  <th className="p-3 text-center">Total Purchased</th>
-                  <th className="p-3 text-center">Stock Value</th>
-                  <th className="p-3 text-center">Last Purchase</th>
-                  <th className="p-3 text-center">Last Sale</th>
+                  <th className="p-3 text-left">Total Qty</th>
+                  <th className="p-3 text-left">Total Sold</th>
+                  <th className="p-3 text-left">Total Purchased</th>
+                  <th className="p-3 text-left">Stock Value</th>
+                  <th className="p-3 text-center whitespace-nowrap">Last Purchase Date</th>
+                <th className="p-3 text-center whitespace-nowrap ">Last Sale Date</th>
+
                 </tr>
               </thead>
 
@@ -219,11 +227,15 @@ const StockPosition = () => {
                   </tr>
                 ) : currentRows.length > 0 ? (
                   currentRows.map((row, i) => (
-                    <tr key={row.id} className="border-b hover:bg-primary/5">
+                    <tr
+                      key={row.id}
+                      className="border-b  hover:bg-primary/5"
+                    >
                       <td className="p-3">{startIndex + i + 1}</td>
-                      <td className="p-3 font-semibold">
+                      <td className="p-3 font-semibold whitespace-normal break-words ">
                         {row.itemName || "-"}
                       </td>
+
                       <td className="p-3 font-semibold">
                         {row.category || "-"}
                       </td>
@@ -234,27 +246,27 @@ const StockPosition = () => {
                         </td>
                       ))}
 
-                      <td className="p-3 text-center font-bold">
+                      <td className="p-3 text-left font-bold">
                         {row.totalQty ?? "-"}
                       </td>
-                      <td className="p-3 text-center font-bold">
+                      <td className="p-3 text-left font-bold">
                         {row.totalSold ?? "-"}
                       </td>
-                      <td className="p-3 text-center font-bold">
+                      <td className="p-3 text-left font-bold">
                         {row.totalPurchased ?? "-"}
                       </td>
 
-                      <td className="p-3 text-center font-bold">
-                        {row.stockValue ?? "-"}
+                      <td className="p-3 text-left font-bold">
+                        {row.stockValue?.toFixed(2) ?? "-"}
                       </td>
 
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-left">
                         {row.lastPurchase && row.lastPurchase !== "-"
                           ? new Date(row.lastPurchase).toLocaleDateString()
                           : "-"}
                       </td>
 
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-left ">
                         {row.lastSale && row.lastSale !== "-"
                           ? new Date(row.lastSale).toLocaleDateString()
                           : "-"}
@@ -276,18 +288,20 @@ const StockPosition = () => {
             </table>
 
             {/* ⭐ GRAND TOTAL */}
-            <div className="text-right mt-4 pr-4">
+            <div className="w-full text-right mt-4 pr-4 border-t pt-4">
               <span className="text-lg font-bold text-primary">
                 Grand Total Stock Value: {grandTotalStockValue}
               </span>
             </div>
 
-            <Pagination
-              currentPage={currentPage}
-              totalItems={filteredRows.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-            />
+            <div className="w-full  mt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredRows.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
